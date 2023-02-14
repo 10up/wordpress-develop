@@ -1,3 +1,5 @@
+name: Sync Upstream Branches
+
 on:
   schedule:
   - cron:  '*/30 * * * *'
