@@ -1,0 +1,20 @@
+on:
+  schedule:
+  - cron:  '*/30 * * * *'
+  workflow_dispatch:
+
+jobs:
+  repo-sync:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: webfactory/ssh-agent@v0.7.0
+      with:
+        ssh-private-key: ${{ secrets.DEPLOY_KEY }}
+    - name: Sync trunk & release branches from wordpress-develop
+      run: |
+        git remote add upstream https://github.com/WordPress/wordpress-develop.git
+        git fetch upstream  --tags
+        git push origin 'refs/remotes/upstream/trunk:refs/heads/trunk'
+        git push origin 'refs/remotes/upstream/release/*:refs/heads/release/*'
+        git push origin --tags
