@@ -155,7 +155,7 @@ jobs:
         with:
             github-token: ${{ secrets.GITHUB_TOKEN }}
             script: |
-                const baseRef = await github.rest.git.getRef({ owner: context.repo.owner, repo: context.repo.repo, ref: "tags/${{ BASE_TAG }}" });
+                const baseRef = await github.rest.git.getRef({ owner: context.repo.owner, repo: context.repo.repo, ref: "tags/${{ env.BASE_TAG }}" });
                 return baseRef.data.object.sha;
 
       - name: Set commit details
