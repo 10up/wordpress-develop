@@ -123,15 +123,16 @@ class WP_Scripts extends WP_Dependencies {
 	public $default_dirs;
 
 	/**
-	 * Holds a string which contains the type attribute for script tag.
+	 * Whether script tags should be generated as HTML5.
 	 *
 	 * If the active theme does not declare HTML5 support for 'script',
-	 * then it initializes as `type='text/javascript'`.
+	 * then scripts are output with `type='text/javascript'`.
 	 *
 	 * @since 5.3.0
-	 * @var string
+	 * @since 6.3.0 Renamed from type_attr to is_html5.
+	 * @var bool
 	 */
-	private $type_attr = '';
+	private $is_html5 = true;
 
 	/**
 	 * Holds a mapping of dependents (as handles) for a given script handle.
@@ -163,7 +164,7 @@ class WP_Scripts extends WP_Dependencies {
 		&&
 			function_exists( 'current_theme_supports' ) && ! current_theme_supports( 'html5', 'script' )
 		) {
-			$this->type_attr = " type='text/javascript'";
+			$this->is_html5 = false;
 		}
 
 		/**
@@ -236,16 +237,16 @@ class WP_Scripts extends WP_Dependencies {
 			return $output;
 		}
 
-		printf( "<script%s id='%s-js-extra'>\n", $this->type_attr, esc_attr( $handle ) );
+		printf( "<script%s id='%s-js-extra'>\n", $this->is_html5 ? '' : " type='text/javascript'", esc_attr( $handle ) );
 
 		// CDATA is not needed for HTML 5.
-		if ( $this->type_attr ) {
+		if ( ! $this->is_html5 ) {
 			echo "/* <![CDATA[ */\n";
 		}
 
 		echo "$output\n";
 
-		if ( $this->type_attr ) {
+		if ( ! $this->is_html5 ) {
 			echo "/* ]]> */\n";
 		}
 
@@ -306,7 +307,7 @@ class WP_Scripts extends WP_Dependencies {
 		$before_handle = $this->print_inline_script( $handle, 'before', false );
 
 		if ( $before_handle ) {
-			$before_handle = sprintf( "<script%s id='%s-js-before'>\n%s\n</script>\n", $this->type_attr, esc_attr( $handle ), $before_handle );
+			$before_handle = sprintf( "<script%s id='%s-js-before'>\n%s\n</script>\n", $this->is_html5 ? '' : " type='text/javascript'", esc_attr( $handle ), $before_handle );
 		}
 
 		// Eligible loading strategies will only be 'async', 'defer', or ''.
@@ -317,7 +318,7 @@ class WP_Scripts extends WP_Dependencies {
 		if ( $after_handle ) {
 			$after_handle = sprintf(
 				"<script%1\$s id='%2\$s-js-after'>\n%3\$s\n</script>\n",
-				$this->type_attr,
+				$this->is_html5 ? '' : " type='text/javascript'",
 				esc_attr( $handle ),
 				$after_handle
 			);
@@ -348,7 +349,7 @@ class WP_Scripts extends WP_Dependencies {
 
 		$translations = $this->print_translations( $handle, false );
 		if ( $translations ) {
-			$translations = sprintf( "<script%s id='%s-js-translations'>\n%s\n</script>\n", $this->type_attr, esc_attr( $handle ), $translations );
+			$translations = sprintf( "<script%s id='%s-js-translations'>\n%s\n</script>\n", $this->is_html5 ? '' : " type='text/javascript'", esc_attr( $handle ), $translations );
 		}
 
 		if ( $this->do_concat ) {
@@ -434,7 +435,7 @@ class WP_Scripts extends WP_Dependencies {
 		$tag  = $translations . $cond_before . $before_handle;
 		$tag .= sprintf(
 			"<script%s src='%s' id='%s-js'%s></script>\n",
-			$this->type_attr,
+			$this->is_html5 ? '' : " type='text/javascript'",
 			esc_url( $src ),
 			esc_attr( $handle ),
 			$strategy
@@ -527,7 +528,7 @@ class WP_Scripts extends WP_Dependencies {
 
 			printf(
 				$script_output,
-				$this->type_attr,
+				$this->is_html5 ? '' : " type='text/javascript'",
 				esc_attr( $handle ),
 				esc_attr( $position ),
 				$output
@@ -693,7 +694,7 @@ class WP_Scripts extends WP_Dependencies {
 JS;
 
 		if ( $display ) {
-			printf( "<script%s id='%s-js-translations'>\n%s\n</script>\n", $this->type_attr, esc_attr( $handle ), $output );
+			printf( "<script%s id='%s-js-translations'>\n%s\n</script>\n", $this->is_html5 ? '' : " type='text/javascript'", esc_attr( $handle ), $output );
 		}
 
 		return $output;
