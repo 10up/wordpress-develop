@@ -123,18 +123,6 @@ class WP_Scripts extends WP_Dependencies {
 	public $default_dirs;
 
 	/**
-	 * Whether script tags should be generated as HTML5.
-	 *
-	 * If the active theme does not declare HTML5 support for 'script',
-	 * then scripts are output with `type='text/javascript'`.
-	 *
-	 * @since 5.3.0
-	 * @since 6.3.0 Renamed from type_attr to is_html5.
-	 * @var bool
-	 */
-	private $is_html5 = true;
-
-	/**
 	 * Holds a mapping of dependents (as handles) for a given script handle.
 	 * Used to optimize recursive dependency tree checks.
 	 *
@@ -159,14 +147,6 @@ class WP_Scripts extends WP_Dependencies {
 	 * @since 3.4.0
 	 */
 	public function init() {
-		if (
-			function_exists( 'is_admin' ) && ! is_admin()
-		&&
-			function_exists( 'current_theme_supports' ) && ! current_theme_supports( 'html5', 'script' )
-		) {
-			$this->is_html5 = false;
-		}
-
 		/**
 		 * Fires when the WP_Scripts instance is initialized.
 		 *
