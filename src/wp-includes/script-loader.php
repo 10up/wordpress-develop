@@ -2794,7 +2794,8 @@ function wp_sanitize_script_attributes( $attributes ) {
  * @return string String containing `<script>` opening and closing tags.
  */
 function wp_get_script_tag( $attributes ) {
-	if ( ! isset( $attributes['type'] ) && ! is_admin() && ! current_theme_supports( 'html5', 'script' ) ) {
+	$is_html5 = is_admin() || current_theme_supports( 'html5', 'script' );
+	if ( ! isset( $attributes['type'] ) && ! $is_html5 ) {
 		$attributes['type'] = 'text/javascript';
 	}
 	/**
@@ -2838,7 +2839,8 @@ function wp_print_script_tag( $attributes ) {
  * @return string String containing inline JavaScript code wrapped around `<script>` tag.
  */
 function wp_get_inline_script_tag( $javascript, $attributes = array() ) {
-	if ( ! isset( $attributes['type'] ) && ! is_admin() && ! current_theme_supports( 'html5', 'script' ) ) {
+	$is_html5 = is_admin() || current_theme_supports( 'html5', 'script' );
+	if ( ! isset( $attributes['type'] ) && ! $is_html5 ) {
 		$attributes['type'] = 'text/javascript';
 	}
 	/**
@@ -2854,6 +2856,11 @@ function wp_get_inline_script_tag( $javascript, $attributes = array() ) {
 	$attributes = apply_filters( 'wp_inline_script_attributes', $attributes, $javascript );
 
 	$javascript = "\n" . trim( $javascript, "\n\r " ) . "\n";
+
+	// Add CDATA comments if not HTML 5.
+	if ( ! $is_html5 ) {
+		$javascript = "\n/* <![CDATA[ */{$javascript}/* ]]> */\n";
+	}
 
 	return sprintf( "<script%s>%s</script>\n", wp_sanitize_script_attributes( $attributes ), $javascript );
 }

@@ -237,20 +237,12 @@ class WP_Scripts extends WP_Dependencies {
 			return $output;
 		}
 
-		printf( "<script%s id='%s-js-extra'>\n", $this->is_html5 ? '' : " type='text/javascript'", esc_attr( $handle ) );
-
-		// CDATA is not needed for HTML 5.
-		if ( ! $this->is_html5 ) {
-			echo "/* <![CDATA[ */\n";
-		}
-
-		echo "$output\n";
-
-		if ( ! $this->is_html5 ) {
-			echo "/* ]]> */\n";
-		}
-
-		echo "</script>\n";
+		wp_print_inline_script_tag(
+			$output,
+			array(
+				'id' => "{$handle}-js-extra",
+			)
+		);
 
 		return true;
 	}
@@ -307,7 +299,10 @@ class WP_Scripts extends WP_Dependencies {
 		$before_handle = $this->print_inline_script( $handle, 'before', false );
 
 		if ( $before_handle ) {
-			$before_handle = sprintf( "<script%s id='%s-js-before'>\n%s\n</script>\n", $this->is_html5 ? '' : " type='text/javascript'", esc_attr( $handle ), $before_handle );
+			$before_handle = wp_get_inline_script_tag(
+				$before_handle,
+				array( 'id' => "{$handle}-js-before" )
+			);
 		}
 
 		// Eligible loading strategies will only be 'async', 'defer', or ''.
@@ -316,21 +311,24 @@ class WP_Scripts extends WP_Dependencies {
 		$after_handle = $this->print_inline_script( $handle, $after, false );
 
 		if ( $after_handle ) {
-			$after_handle = sprintf(
-				"<script%1\$s id='%2\$s-js-after'>\n%3\$s\n</script>\n",
-				$this->is_html5 ? '' : " type='text/javascript'",
-				esc_attr( $handle ),
-				$after_handle
+			$after_handle = wp_get_inline_script_tag(
+				$after_handle,
+				array(
+					'id' => "{$handle}-js-after",
+				)
 			);
 		}
 		if ( '' !== $strategy ) {
 			$after_non_standalone_handle = $this->print_inline_script( $handle, 'after-non-standalone', false );
 
 			if ( $after_non_standalone_handle ) {
-				$after_handle .= sprintf(
-					"<script type='text/template' id='%1\$s-js-after' data-wp-executes-after='%1\$s'>\n%2\$s\n</script>\n",
-					esc_attr( $handle ),
-					$after_non_standalone_handle
+				$after_handle .= wp_get_inline_script_tag(
+					$after_non_standalone_handle,
+					array(
+						'type'                   => 'text/template',
+						'id'                     => "{$handle}-js-after",
+						'data-wp-executes-after' => $handle,
+					)
 				);
 			}
 		}
@@ -349,7 +347,10 @@ class WP_Scripts extends WP_Dependencies {
 
 		$translations = $this->print_translations( $handle, false );
 		if ( $translations ) {
-			$translations = sprintf( "<script%s id='%s-js-translations'>\n%s\n</script>\n", $this->is_html5 ? '' : " type='text/javascript'", esc_attr( $handle ), $translations );
+			$translations = wp_get_inline_script_tag(
+				$translations,
+				array( 'id' => "{$handle}-js-translations" )
+			);
 		}
 
 		if ( $this->do_concat ) {
@@ -426,20 +427,15 @@ class WP_Scripts extends WP_Dependencies {
 			return true;
 		}
 
-		if ( '' !== $strategy ) {
-			$strategy = ' ' . $strategy;
-			if ( ! empty( $after_non_standalone_handle ) ) {
-				$strategy .= sprintf( " onload='wpLoadAfterScripts(%s)'", esc_attr( wp_json_encode( $handle ) ) );
-			}
+		$attributes = array(
+			'src' => $src,
+			'id'  => "{$handle}-js",
+		);
+		if ( '' !== $strategy && ! empty( $after_non_standalone_handle ) ) {
+			$attributes['onload'] = sprintf( 'wpLoadAfterScripts(%s)', wp_json_encode( $handle ) );
 		}
 		$tag  = $translations . $cond_before . $before_handle;
-		$tag .= sprintf(
-			"<script%s src='%s' id='%s-js'%s></script>\n",
-			$this->is_html5 ? '' : " type='text/javascript'",
-			esc_url( $src ),
-			esc_attr( $handle ),
-			$strategy
-		);
+		$tag .= wp_get_script_tag( $attributes );
 		$tag .= $after_handle . $cond_after;
 
 		/**
@@ -447,7 +443,7 @@ class WP_Scripts extends WP_Dependencies {
 		 *
 		 * @since 4.1.0
 		 *
-		 * @param string $tag    The `<script>` tag for the enqueued script.
+		 * @param string $tag    The script tag for the enqueued script.
 		 * @param string $handle The script's registered handle.
 		 * @param string $src    The script's source URL.
 		 */
@@ -520,19 +516,15 @@ class WP_Scripts extends WP_Dependencies {
 		$output = trim( implode( "\n", $output ), "\n" );
 
 		if ( $display ) {
+			$attributes = array();
 			if ( 'after-non-standalone' === $position ) {
-				$script_output = "<script%1\$s id='%2\$s-js-after' data-wp-executes-after='%2\$s'>\n%4\$s\n</script>\n";
+				$attributes['id']                     = "{$handle}-js-after";
+				$attributes['data-wp-executes-after'] = $handle;
 			} else {
-				$script_output = "<script%1\$s id='%2\$s-js-%3\$s'>\n%4\$s\n</script>\n";
+				$attributes['id'] = "{$handle}-js-{$position}";
 			}
 
-			printf(
-				$script_output,
-				$this->is_html5 ? '' : " type='text/javascript'",
-				esc_attr( $handle ),
-				esc_attr( $position ),
-				$output
-			);
+			wp_print_inline_script_tag( $output, $attributes );
 		}
 
 		return $output;
@@ -694,7 +686,12 @@ class WP_Scripts extends WP_Dependencies {
 JS;
 
 		if ( $display ) {
-			printf( "<script%s id='%s-js-translations'>\n%s\n</script>\n", $this->is_html5 ? '' : " type='text/javascript'", esc_attr( $handle ), $output );
+			wp_print_inline_script_tag(
+				$output,
+				array(
+					'id' => "{$handle}-js-translations",
+				)
+			);
 		}
 
 		return $output;
