@@ -81,11 +81,15 @@ JS;
 		$expected = <<<EXP
 <script type="text/javascript" id="wp-executes-after-js">
 function wpLoadAfterScripts( handle ) {
-	const scripts = document.querySelectorAll(`[type="text/template"][data-wp-executes-after="\${handle}"]`);
-	scripts.forEach( (script) => {
-		script.setAttribute("type","text/javascript");
-		eval(script.textContent);
-	})
+	var scripts, newScript, i, len;
+	scripts = document.querySelectorAll(
+		'[type="text/template"][data-wp-executes-after="' + handle + '"]'
+	);
+	for ( i = 0, len = scripts.length; i < len; i++ ) {
+		newScript = scripts[ i ].cloneNode( true );
+		newScript.type = "text/javascript";
+		scripts[ i ].parentNode.replaceChild( newScript, scripts[ i ] );
+	}
 }
 </script>
 <script type='text/javascript' src='http://example.org/ms-isinsa-1.js' id='ms-isinsa-1-js' defer onload='wpLoadAfterScripts(&quot;ms-isinsa-1&quot;)'></script>
@@ -157,11 +161,15 @@ EXP;
 		$expected = <<<EXP
 <script type="text/javascript" id="wp-executes-after-js">
 function wpLoadAfterScripts( handle ) {
-	const scripts = document.querySelectorAll(`[type="text/template"][data-wp-executes-after="\${handle}"]`);
-	scripts.forEach( (script) => {
-		script.setAttribute("type","text/javascript");
-		eval(script.textContent);
-	})
+	var scripts, newScript, i, len;
+	scripts = document.querySelectorAll(
+		'[type="text/template"][data-wp-executes-after="' + handle + '"]'
+	);
+	for ( i = 0, len = scripts.length; i < len; i++ ) {
+		newScript = scripts[ i ].cloneNode( true );
+		newScript.type = "text/javascript";
+		scripts[ i ].parentNode.replaceChild( newScript, scripts[ i ] );
+	}
 }
 </script>
 <script type='text/javascript' src='http://example.org/ms-insa-1.js' id='ms-insa-1-js' defer onload='wpLoadAfterScripts(&quot;ms-insa-1&quot;)'></script>
@@ -190,11 +198,15 @@ EXP;
 		$expected = <<<EXP
 <script type="text/javascript" id="wp-executes-after-js">
 function wpLoadAfterScripts( handle ) {
-	const scripts = document.querySelectorAll(`[type="text/template"][data-wp-executes-after="\${handle}"]`);
-	scripts.forEach( (script) => {
-		script.setAttribute("type","text/javascript");
-		eval(script.textContent);
-	})
+	var scripts, newScript, i, len;
+	scripts = document.querySelectorAll(
+		'[type="text/template"][data-wp-executes-after="' + handle + '"]'
+	);
+	for ( i = 0, len = scripts.length; i < len; i++ ) {
+		newScript = scripts[ i ].cloneNode( true );
+		newScript.type = "text/javascript";
+		scripts[ i ].parentNode.replaceChild( newScript, scripts[ i ] );
+	}
 }
 </script>
 <script type='text/javascript' src='http://example.org/ms-insa-2.js' id='ms-insa-2-js' async onload='wpLoadAfterScripts(&quot;ms-insa-2&quot;)'></script>
