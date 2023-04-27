@@ -411,8 +411,11 @@ class WP_Scripts extends WP_Dependencies {
 			'src' => $src,
 			'id'  => "{$handle}-js",
 		);
-		if ( '' !== $strategy && ! empty( $after_non_standalone_handle ) ) {
-			$attributes['onload'] = sprintf( 'wpLoadAfterScripts(%s)', wp_json_encode( $handle ) );
+		if ( '' !== $strategy ) {
+			$attributes[ $strategy ] = true;
+			if ( ! empty( $after_non_standalone_handle ) ) {
+				$attributes['onload'] = sprintf( 'wpLoadAfterScripts(%s)', wp_json_encode( $handle ) );
+			}
 		}
 		$tag  = $translations . $cond_before . $before_handle;
 		$tag .= wp_get_script_tag( $attributes );
