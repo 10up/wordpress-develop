@@ -219,9 +219,7 @@ class WP_Scripts extends WP_Dependencies {
 
 		wp_print_inline_script_tag(
 			$output,
-			array(
-				'id' => "{$handle}-js-extra",
-			)
+			array( 'id' => "{$handle}-js-extra" )
 		);
 
 		return true;
@@ -293,9 +291,7 @@ class WP_Scripts extends WP_Dependencies {
 		if ( $after_handle ) {
 			$after_handle = wp_get_inline_script_tag(
 				$after_handle,
-				array(
-					'id' => "{$handle}-js-after",
-				)
+				array( 'id' => "{$handle}-js-after" )
 			);
 		}
 		if ( '' !== $strategy ) {
@@ -671,9 +667,7 @@ JS;
 		if ( $display ) {
 			wp_print_inline_script_tag(
 				$output,
-				array(
-					'id' => "{$handle}-js-translations",
-				)
+				array( 'id' => "{$handle}-js-translations" )
 			);
 		}
 
