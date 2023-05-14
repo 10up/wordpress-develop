@@ -5482,6 +5482,22 @@ function wp_get_loading_attr_default( $context ) {
 }
 
 /**
+ * Get loading optimization attributes.
+ *
+ * @since 5.9.0
+ *
+ * @param string $tag_name .
+ * @param array[] $attributes .
+ * @param string $context .
+ *
+ * @return array[]
+ */
+function wp_get_loading_optimization_attributes( $tag_name, $attributes, $context ) {
+
+	return $attributes;
+}
+
+/**
  * Gets the threshold for how many of the first content media elements to not lazy-load.
  *
  * This function runs the {@see 'wp_omit_loading_attr_threshold'} filter, which uses a default threshold value of 1.
