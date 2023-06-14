@@ -39,15 +39,26 @@
 	}
 
 	/**
+	 * Get deps data.
+	 *
+	 * @param {HTMLScriptElement} scriptElement Script element.
+	 */
+	function getDepsData( scriptElement ) {
+		if ( ! scriptElement.dataset.wpDeps ) {
+			return [];
+		}
+		return scriptElement.dataset.wpDeps.split(/,/);
+	}
+
+	/**
 	 * Runs the supplied inline scripts if all of their dependencies have been done.
 	 *
 	 * @param {NodeList<HTMLScriptElement>} scripts Scripts to run if ready.
 	 */
 	function runReadyInlineScripts(scripts) {
-		var i, len, deps;
+		var i, len;
 		for (i = 0, len = scripts.length; i < len; i++) {
-			deps = scripts[i].dataset.wpDeps.split(/,/);
-			if (deps.every(isDependencyDone)) {
+			if (getDepsData(scripts[i]).every(isDependencyDone)) {
 				runInlineScript(scripts[i]);
 			}
 		}
@@ -59,7 +70,7 @@
 	 * @param {Event} event Event.
 	 */
 	function onScriptLoad(event) {
-		var matches, handle, script;
+		var matches, handle, script, deps;
 		if (!(event.target instanceof HTMLScriptElement || event.target.id)) {
 			return;
 		}
@@ -70,6 +81,10 @@
 		}
 		handle = matches[1];
 		doneDependencies.add(handle);
+
+		// Collect additional deps...
+		getDepsData(event.target).forEach( function ( dep ) { doneDependencies.add( dep ) } );
+		console.info(getDepsData(event.target));
 
 		/*
 		 * Return now if blocking because we cannot run delayed inline scripts because if we do, we could accidentally

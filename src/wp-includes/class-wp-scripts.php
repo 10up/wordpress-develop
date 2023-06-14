@@ -447,12 +447,13 @@ class WP_Scripts extends WP_Dependencies {
 
 		$tag  = $translations . $cond_before . $before_script;
 		$tag .= sprintf(
-			"<script%s src='%s' id='%s-js'%s%s></script>\n",
+			"<script%s src='%s' id='%s-js'%s%s%s></script>\n",
 			$this->type_attr,
 			esc_url( $src ),
 			esc_attr( $handle ),
 			$strategy ? " {$strategy}" : '',
-			$intended_strategy ? " data-wp-strategy='{$intended_strategy}'" : ''
+			$intended_strategy ? " data-wp-strategy='{$intended_strategy}'" : '',
+			$obj->deps ? sprintf( ' data-wp-deps="%s"', esc_attr( implode( ',', $obj->deps ) ) ) : ''
 		);
 		$tag .= $after_script . $cond_after;
 
@@ -598,7 +599,8 @@ class WP_Scripts extends WP_Dependencies {
 	 */
 	public function print_delayed_inline_script_loader() {
 		wp_print_inline_script_tag(
-			file_get_contents( ABSPATH . WPINC . '/js/wp-delayed-inline-script-loader' . wp_scripts_get_suffix() . '.js' ),
+			//file_get_contents( ABSPATH . WPINC . '/js/wp-delayed-inline-script-loader' . wp_scripts_get_suffix() . '.js' ),
+			file_get_contents( ABSPATH . '/js/_enqueues/lib/delayed-inline-script-loader' . wp_scripts_get_suffix() . '.js' ),
 			array( 'id' => 'wp-delayed-inline-script-loader' )
 		);
 		$this->printed_delayed_inline_script_loader = true;
@@ -1035,7 +1037,7 @@ JS;
 
 		// Consider each dependent and check if it is delayed.
 		foreach ( $dependents as $dependent ) {
-			// If the dependent script has no src (as it represents a script bundle), ignore it for consideration.
+			// If the dependent script has no src (as it represents a script bundle), ignore it from consideration.
 			if ( empty( $this->registered[ $dependent ]->src ) ) {
 				continue;
 			}
