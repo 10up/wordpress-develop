@@ -405,12 +405,15 @@ class WP_Scripts extends WP_Dependencies {
 				$this->previous_item &&
 				// The previous item cannot be an alias since there is no load event to execute the subsequent before script.
 				$this->previous_item->src &&
-				(
-					// If the previous item was delayed, we can delay the before script since the load event will fire at the right time.
-					$this->previous_item_delayed ||
-					// Otherwise, if the previous item was blocking, we can only delay the before script if the previous item did not have an after script.
-					! $this->previous_item_has_after_inline_script
-				)
+				// If the previous item was delayed, we can delay the before script since the load event will fire at the right time.
+				// Otherwise, if the previous item was blocking, then the load event would fire before any subsequent before inline scripts would be in the DOM.
+				$this->previous_item_delayed
+//				(
+//					// If the previous item was delayed, we can delay the before script since the load event will fire at the right time.
+//					$this->previous_item_delayed ||
+//					// Otherwise, if the previous item was blocking, we can only delay the before script if the previous item did not have an after script.
+//					! $this->previous_item_has_after_inline_script
+//				)
 				//&&
 				//$this->should_delay_inline_script( $handle, 'before' )
 			);

@@ -96,7 +96,11 @@
 		handle = matches[1];
 		doneDependencies.add(handle);
 
-		console.info( 'LOAD', event.target );
+
+		console.info( '######## LOAD', event.target );
+
+		console.info( 'ADDED DEP: ' + handle );
+
 		console.info( 'doneDependencies', doneDependencies );
 
 		// Add all deps on the script as well. This is needed for the case of a script alias being a dependency for a delayed dependency.
@@ -125,9 +129,9 @@
 			'script:not([src])[type="text/plain"][data-wp-deps][id$="-js-before"]:not([data-wp-done])'
 		);
 		console.log(Array.from( scripts ))
-		runReadyInlineScripts(
-			scripts
-		);
+		// runReadyInlineScripts(
+		// 	scripts
+		// );
 	}
 
 	document.addEventListener('load', onScriptLoad, true);
