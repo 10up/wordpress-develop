@@ -399,6 +399,8 @@ class WP_Scripts extends WP_Dependencies {
 			 *
 			 */
 			$should_delay_before_script = (
+				// If there are no dependencies, then the script loader is not able to determine when to execute. Also, no need to delay.
+				! empty( $obj->deps ) &&
 				// A before script can only be delayed if there was a previous script printed onto which a load event can run.
 				$this->previous_item &&
 				// The previous item cannot be an alias since there is no load event to execute the subsequent before script.
