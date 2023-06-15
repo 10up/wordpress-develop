@@ -1666,7 +1666,7 @@ HTML
 	}
 
 	/**
-	 * Testing `wp_script_add_data` with an anvalid key.
+	 * Testing `wp_script_add_data` with an invalid key.
 	 *
 	 * @ticket 16024
 	 */
