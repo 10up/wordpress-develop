@@ -1089,7 +1089,7 @@ HTML
 	}
 
 	/**
-	 * Test that main script is defer and all dependencies are either defer/blocking.
+	 * Tests that a script registered with defer remains deferred when all dependencies are either deferred or blocking.
 	 *
 	 * @ticket 12009
 	 *
