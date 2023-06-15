@@ -380,9 +380,8 @@ HTML
 	}
 
 	/**
-	 * Test `before` inline scripts attached to delayed main scripts.
-	 *
-	 * If the main script has a `before` inline script, all dependents still be delayed.
+	 * Tests that inline scripts in the `before` position, attached to a delayed inline main script, results in all
+	 * dependents being delayed.
 	 *
 	 * @ticket 12009
 	 *
