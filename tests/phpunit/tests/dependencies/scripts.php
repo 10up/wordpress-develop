@@ -1073,7 +1073,7 @@ HTML
 	}
 
 	/**
-	 * Test defer strategy when there are no dependents and no dependencies.
+	 * Tests that defer is the final strategy when registering a script using defer, that has no dependents/dependencies.
 	 *
 	 * @ticket 12009
 	 *
