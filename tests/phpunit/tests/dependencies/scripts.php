@@ -1172,7 +1172,7 @@ HTML
 	}
 
 	/**
-	 * Test valid blocking loading strategy cases.
+	 * Tests that scripts registered as default/blocking remain as such when they have no dependencies.
 	 *
 	 * @ticket 12009
 	 *
