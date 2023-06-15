@@ -445,7 +445,7 @@ HTML
 	}
 
 	/**
-	 * Test delayed dependent with blocking dependency.
+	 * Tests that dependents of a blocking dependency script are free to contain any strategy.
 	 *
 	 * @ticket 12009
 	 *
