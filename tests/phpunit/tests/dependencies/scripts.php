@@ -1052,7 +1052,7 @@ HTML
 	}
 
 	/**
-	 * Test various strategy dependency chains.
+	 * Tests that various loading strategy dependency chains function as expected.
 	 *
 	 * @covers ::wp_enqueue_script()
 	 * @covers ::wp_add_inline_script()
