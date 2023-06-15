@@ -1371,8 +1371,7 @@ HTML
 	}
 
 	/**
-	 *
-	 * Test script strategy doing it wrong when calling wp_script_add_data().
+	 * Tests that scripts print with no strategy when an incorrect strategy is passed via wp_script_add_data().
 	 *
 	 * For an invalid strategy defined during script registration, default to a blocking strategy.
 	 *
