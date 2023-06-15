@@ -1222,7 +1222,7 @@ HTML
 	}
 
 	/**
-	 * Test that scripts registered for the footer do indeed end up there.
+	 * Tests that scripts registered for printing in the footer section, do end up there.
 	 *
 	 * @ticket 12009
 	 *
