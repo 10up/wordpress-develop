@@ -129,9 +129,9 @@
 			'script:not([src])[type="text/plain"][data-wp-deps][id$="-js-before"]:not([data-wp-done])'
 		);
 		console.log(Array.from( scripts ))
-		// runReadyInlineScripts(
-		// 	scripts
-		// );
+		runReadyInlineScripts(
+			scripts
+		);
 	}
 
 	document.addEventListener('load', onScriptLoad, true);
