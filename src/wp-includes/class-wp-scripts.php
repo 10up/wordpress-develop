@@ -1152,9 +1152,9 @@ JS;
 		// Consider each dependent and check if it is delayed.
 		foreach ( $dependents as $dependent ) {
 			// If the dependent script has no src (as it represents an alias for a set of items), ignore it from consideration.
-			if ( empty( $this->registered[ $dependent ]->src ) ) {
-				continue;
-			}
+//			if ( empty( $this->registered[ $dependent ]->src ) ) {
+//				continue;
+//			}
 
 			// If the dependency is not enqueued, ignore it for consideration.
 			if ( ! $this->query( $dependent, 'enqueued' ) ) {
