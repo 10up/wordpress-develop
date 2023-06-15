@@ -96,6 +96,9 @@
 		handle = matches[1];
 		doneDependencies.add(handle);
 
+		console.info( 'LOAD', event.target );
+		console.info( 'doneDependencies', doneDependencies );
+
 		// Add all deps on the script as well. This is needed for the case of a script alias being a dependency for a delayed dependency.
 		getDepsData(event.target).forEach(function ( dep ) {
 			doneDependencies.add( dep );
@@ -118,7 +121,6 @@
 		}
 
 		// Next, run all pending inline before scripts for all dependents for which all dependencies have loaded.
-		console.log( 'Run before scripts for', event.target );
 		const scripts = document.querySelectorAll(
 			'script:not([src])[type="text/plain"][data-wp-deps][id$="-js-before"]:not([data-wp-done])'
 		);
