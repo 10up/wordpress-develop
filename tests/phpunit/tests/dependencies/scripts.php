@@ -317,7 +317,7 @@ HTML
 	}
 
 	/**
-	 * Tests that inline scripts in the `after` position, attached to delayed inline scripts, remain unaffected.
+	 * Tests that inline scripts in the `after` position, attached to delayed main scripts, remain unaffected.
 	 *
 	 * If the main script with delayed loading strategy has an `after` inline script,
 	 * the inline script should not be affected.
