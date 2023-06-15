@@ -1108,7 +1108,7 @@ HTML
 	}
 
 	/**
-	 * Test that dependency remains defer when it has defer dependents.
+	 * Tests that scripts registered with defer remain deferred when all dependents are also deferred.
 	 *
 	 * @ticket 12009
 	 *
