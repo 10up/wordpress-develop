@@ -15,7 +15,17 @@
 	 * @returns {boolean} Whether dependency was done.
 	 */
 	function isDependencyDone(dep) {
-		return doneDependencies.has(dep);
+		if ( doneDependencies.has(dep) ) {
+			return true;
+		}
+
+		// If the dependency doesn't exist in the document, it must be an alias.
+		console.info( 'is it done: ', dep )
+		if ( ! ( document.getElementById( dep + '-js' ) instanceof HTMLScriptElement ) ) {
+			return true;
+		}
+
+		return false;
 	}
 
 	/**
@@ -58,11 +68,15 @@
 	function runReadyInlineScripts(scripts) {
 		var i, len;
 		for (i = 0, len = scripts.length; i < len; i++) {
-			if (getDepsData(scripts[i]).every(isDependencyDone)) {
+			if (getDepsData(scripts[i]).every(isDependencyDone)) { // TODO: We don't really need data-wp-deps on the inline script if it is on the main script.
 				runInlineScript(scripts[i]);
 			}
 		}
 	}
+
+	window.wpBeforeInlineScripts = function () {
+
+	};
 
 	/**
 	 * Runs whenever a load event happens.
@@ -82,31 +96,35 @@
 		handle = matches[1];
 		doneDependencies.add(handle);
 
-		// Collect additional deps...
-		getDepsData(event.target).forEach( function ( dep ) { doneDependencies.add( dep ) } );
-		console.info(getDepsData(event.target));
+		// Add all deps on the script as well. This is needed for the case of a script alias being a dependency for a delayed dependency.
+		getDepsData(event.target).forEach(function ( dep ) {
+			doneDependencies.add( dep );
+			console.info( 'ADDED DEP: ' + dep );
+		});
 
 		/*
-		 * Return now if blocking because we cannot run delayed inline scripts because if we do, we could accidentally
-		 * run the before inline script for a dependent _before_ the after script of this blocking script is evaluated.
+		 * //Return now if blocking because we cannot run delayed inline scripts because if we do, we could accidentally
+		 * //run the before inline script for a dependent _before_ the after script of this blocking script is evaluated.
 		 */
-		if (!(event.target.async || event.target.defer)) {
-			return;
-		}
 
 		// First, run all inline after scripts which are associated with this handle.
-		script = document.querySelector(
-			'script:not([src])[type="text/plain"][id="' + handle + '-js-after"]'
-		);
-		if (script instanceof HTMLScriptElement) {
-			runInlineScript(script);
+		if (event.target.async || event.target.defer) {
+			script = document.querySelector(
+				'script:not([src])[type="text/plain"][id="' + handle + '-js-after"]'
+			);
+			if (script instanceof HTMLScriptElement) {
+				runInlineScript(script);
+			}
 		}
 
 		// Next, run all pending inline before scripts for all dependents for which all dependencies have loaded.
+		console.log( 'Run before scripts for', event.target );
+		const scripts = document.querySelectorAll(
+			'script:not([src])[type="text/plain"][data-wp-deps][id$="-js-before"]:not([data-wp-done])'
+		);
+		console.log(Array.from( scripts ))
 		runReadyInlineScripts(
-			document.querySelectorAll(
-				'script:not([src])[type="text/plain"][data-wp-deps][id$="-js-before"]:not([data-wp-done])'
-			)
+			scripts
 		);
 	}
 

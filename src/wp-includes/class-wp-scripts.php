@@ -85,6 +85,34 @@ class WP_Scripts extends WP_Dependencies {
 	public $printed_delayed_inline_script_loader = false;
 
 	/**
+	 * The strategy used for the previous item that was done.
+	 *
+	 * @var string
+	 */
+	private $previous_item_delayed = '';
+
+	/**
+	 * That handle that was previously printed.
+	 *
+	 * @var _WP_Dependency
+	 */
+	private $previous_item;
+
+	/**
+	 * Whether the previous item had an after inline script.
+	 *
+	 * @var string
+	 */
+	private $previous_item_has_after_inline_script = false;
+
+	/**
+	 * Whether a delayed script has been printed.
+	 *
+	 * @var bool
+	 */
+	private $did_print_delayed_script = false;
+
+	/**
 	 * Holds HTML markup of scripts and additional data if concatenation
 	 * is enabled.
 	 *
@@ -354,8 +382,50 @@ class WP_Scripts extends WP_Dependencies {
 			$cond_after  = "<![endif]-->\n";
 		}
 
-		$before_script = $this->get_inline_script_tag( $handle, 'before' );
-		$after_script  = $this->get_inline_script_tag( $handle, 'after' );
+		$is_alias = ! $src; // Note: Technically $src could end up becoming false due to the script_loader_src filter below.
+
+		// TODO: If this is alias has no dependencies or depends on blocking dependencies which have after scripts, both of these must be false.
+		$is_delayed_strategy        = $this->is_delayed_strategy( $strategy ) && ! $is_alias;
+		$should_delay_before_script = false;
+		$should_delay_after_script  = false;
+		if ( $is_delayed_strategy ) {
+			/*
+			 * We only can delay a before inline script if:
+			 * 1. This item is delayed.
+			 * 2. The previous item is not an alias.      //, in which case we can delay. Can an alias dependent really be delayed? Not really.
+			 * 3.
+			 * 3. A previous item was delayed onto which a load event is attached, OR
+			 *    the previous script is no lacked an after script. (?) (In this case, we'll need to remove the target.async and target.defer short circuit.)
+			 *
+			 */
+			$should_delay_before_script = (
+				// A before script can only be delayed if there was a previous script printed onto which a load event can run.
+				$this->previous_item &&
+				// The previous item cannot be an alias since there is no load event to execute the subsequent before script.
+				$this->previous_item->src &&
+				(
+					// If the previous item was delayed, we can delay the before script since the load event will fire at the right time.
+					$this->previous_item_delayed ||
+					// Otherwise, if the previous item was blocking, we can only delay the before script if the previous item did not have an after script.
+					! $this->previous_item_has_after_inline_script
+				)
+				//&&
+				//$this->should_delay_inline_script( $handle, 'before' )
+			);
+
+			/*
+			 * We can only delay an after inline script if:
+			 * 1.
+			 */
+			$should_delay_after_script  = $this->should_delay_inline_script( $handle, 'after' );
+		}
+
+		$before_script = $this->get_inline_script_tag( $handle, 'before', $should_delay_before_script );
+		$after_script  = $this->get_inline_script_tag( $handle, 'after', $should_delay_after_script );
+
+		$this->previous_item_delayed                 = $is_delayed_strategy;
+		$this->previous_item                         = $obj;
+		$this->previous_item_has_after_inline_script = (bool) $after_script;
 
 		if ( $before_script || $after_script ) {
 			$inline_script_tag = $cond_before . $before_script . $after_script . $cond_after;
@@ -561,9 +631,10 @@ class WP_Scripts extends WP_Dependencies {
 	 *                         Must be lowercase.
 	 * @param string $position Optional. Whether to get tag for inline
 	 *                         scripts in the before or after position. Default 'after'.
+	 * @param bool   $delayed  Optional. Whether to make the script tag delayed.
 	 * @return string Inline script, which may be empty string.
 	 */
-	public function get_inline_script_tag( $handle, $position = 'after' ) {
+	public function get_inline_script_tag( $handle, $position = 'after', $delayed = false ) {
 		$js = $this->get_inline_script_data( $handle, $position );
 		if ( empty( $js ) ) {
 			return '';
@@ -572,7 +643,7 @@ class WP_Scripts extends WP_Dependencies {
 		$id   = "{$handle}-js-{$position}";
 		$deps = $this->registered[ $handle ]->deps;
 
-		if ( $this->should_delay_inline_script( $handle, $position ) ) {
+		if ( $delayed ) {
 			$attributes = array(
 				'id'   => $id,
 				'type' => 'text/plain',
@@ -600,7 +671,7 @@ class WP_Scripts extends WP_Dependencies {
 	public function print_delayed_inline_script_loader() {
 		wp_print_inline_script_tag(
 			//file_get_contents( ABSPATH . WPINC . '/js/wp-delayed-inline-script-loader' . wp_scripts_get_suffix() . '.js' ),
-			file_get_contents( ABSPATH . '/js/_enqueues/lib/delayed-inline-script-loader' . wp_scripts_get_suffix() . '.js' ),
+			file_get_contents( ABSPATH . '/js/_enqueues/lib/delayed-inline-script-loader' . wp_scripts_get_suffix() . '.js' ), // TODO: Revert
 			array( 'id' => 'wp-delayed-inline-script-loader' )
 		);
 		$this->printed_delayed_inline_script_loader = true;
@@ -628,16 +699,19 @@ class WP_Scripts extends WP_Dependencies {
 			return true;
 		}
 
-		// From now on, we're only considering before inline scripts.
+		// From now on, we're only considering _before_ inline scripts.
 		$deps = $this->registered[ $handle ]->deps;
 
 		/*
 		 * If there are no dependencies, the before script must not delay since there will not be a load event on a
 		 * preceding script for which an event handler can run the before inline script.
 		 */
-		if ( empty( $deps ) ) {
-			return false;
-		}
+//		if ( empty( $deps ) ) {
+//			return false;
+//		}
+
+		// TODO: If there is a blocking dependency but the previous dependent was non-blocking, we can go ahead and return true.
+		// TODO: If the blocking dependency is marked as a delayed strategy.
 
 		/*
 		 * Only delay a before inline script if there is a delayed dependency. When this dependency loads, the load
@@ -650,6 +724,9 @@ class WP_Scripts extends WP_Dependencies {
 		 * dependency's after inline script.
 		 */
 		foreach ( $deps as $dep ) {
+			if ( ! isset( $this->registered[ $dep ] ) || ! $this->registered[ $dep ]->src ) {
+				continue; // Skip considering
+			}
 			if ( $this->is_delayed_strategy( $this->get_eligible_loading_strategy( $dep ) ) ) {
 				return true;
 			}
@@ -931,7 +1008,7 @@ JS;
 					__METHOD__,
 					sprintf(
 						/* translators: 1: $strategy, 2: $handle */
-						__( 'Cannot supply a strategy `%1$s` for script `%2$s` because it does not have a `src` value.' ),
+						__( 'Cannot supply a strategy `%1$s` for script `%2$s` because it is an alias (it lacks a `src` value).' ),
 						$value,
 						$handle
 					),
@@ -949,15 +1026,24 @@ JS;
 	 * @since 6.3.0
 	 * @see WP_Scripts::should_delay_inline_script()
 	 *
+	 * TODO: Ideally this wouldn't be needed. We should rather just print the delayed inline script loader when it is needed.
+	 *
 	 * @param string[] $handles Handles to check.
 	 * @return bool True if the inline script present, otherwise false.
 	 */
 	public function has_delayed_inline_script( array $handles ) {
 		foreach ( $handles as $handle ) {
+			$eligible_strategy = $this->get_eligible_loading_strategy( $handle );
+			if ( ! $eligible_strategy ) {
+				continue;
+			}
+
 			foreach ( array( 'before', 'after' ) as $position ) {
 				if (
-					$this->get_data( $handle, $position ) &&
-					$this->should_delay_inline_script( $handle, $position )
+					$this->get_data( $handle, $position )
+					//&&
+					//$this->is_delayed_strategy( $handle )
+					//$this->should_delay_inline_script( $handle, $position ) // TODO: This is getting called multiple times, here and in do_item().
 				) {
 					return true;
 				}
@@ -1086,8 +1172,10 @@ JS;
 		 * - An empty strategy is synonymous with blocking.
 		 * - A script alias (where $src is false) must always be blocking since the after inline script cannot be
 		 *   delayed as there is no external script tag and thus no load event at which the inline script can be run.
+		 *
+		 * TODO: The second condition may not be valid.
 		 */
-		if ( empty( $intended_strategy ) || empty( $this->registered[ $handle ]->src ) ) {
+		if ( empty( $intended_strategy ) /*|| empty( $this->registered[ $handle ]->src )*/ ) {
 			return '';
 		}
 
