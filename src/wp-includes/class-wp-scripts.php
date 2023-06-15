@@ -92,6 +92,13 @@ class WP_Scripts extends WP_Dependencies {
 	private $previous_item_delayed = '';
 
 	/**
+	 * Lookup of which items were actualy delayed.
+	 *
+	 * @var array<string, true>
+	 */
+	private $delayed_handles = array();
+
+	/**
 	 * That handle that was previously printed.
 	 *
 	 * @var _WP_Dependency
@@ -407,7 +414,12 @@ class WP_Scripts extends WP_Dependencies {
 				$this->previous_item->src &&
 				// If the previous item was delayed, we can delay the before script since the load event will fire at the right time.
 				// Otherwise, if the previous item was blocking, then the load event would fire before any subsequent before inline scripts would be in the DOM.
-				$this->previous_item_delayed
+				// Alternatively, if this item had multiple dependencies, including perhaps a blocking one that was printed after a delayed one, it must also be delayed.
+				(
+					$this->previous_item_delayed
+					||
+					$this->has_delayed_dependency( $handle )
+				)
 //				(
 //					// If the previous item was delayed, we can delay the before script since the load event will fire at the right time.
 //					$this->previous_item_delayed ||
@@ -422,7 +434,9 @@ class WP_Scripts extends WP_Dependencies {
 			 * We can only delay an after inline script if:
 			 * 1.
 			 */
-			$should_delay_after_script  = $this->should_delay_inline_script( $handle, 'after' );
+			$should_delay_after_script = true; //$this->should_delay_inline_script( $handle, 'after' );
+
+			$this->delayed_handles[ $handle ] = true;
 		}
 
 		$before_script = $this->get_inline_script_tag( $handle, 'before', $should_delay_before_script );
@@ -737,6 +751,15 @@ class WP_Scripts extends WP_Dependencies {
 			}
 		}
 
+		return false;
+	}
+
+	private function has_delayed_dependency( $handle ) {
+		foreach ( $this->registered[ $handle ]->deps as $dep ) {
+			if ( array_key_exists( $dep, $this->delayed_handles ) ) {
+				return true;
+			}
+		}
 		return false;
 	}
 
