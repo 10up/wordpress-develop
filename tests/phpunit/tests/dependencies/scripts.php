@@ -427,7 +427,7 @@ HTML
 	}
 
 	/**
-	 * Test valid async loading strategy case.
+	 * Tests that scripts registered with an async strategy print with the async attribute.
 	 *
 	 * @ticket 12009
 	 *
