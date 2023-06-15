@@ -1348,7 +1348,7 @@ HTML
 	}
 
 	/**
-	 * Tests that scripts print with no strategy when an incorrect strategy is passed during script register/enqueue.
+	 * Tests that scripts print with no strategy when an incorrect strategy is passed during wp_register_script.
 	 *
 	 * For an invalid strategy defined during script registration, default to a blocking strategy.
 	 *
