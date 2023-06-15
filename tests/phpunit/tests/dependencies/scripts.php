@@ -1487,7 +1487,8 @@ HTML
 	}
 
 	/**
-	 * Test script concatenation with blocking scripts before and after a `defer` script.
+	 * Tests that script concatenation remains correct when a main script is registered as deferred after other blocking
+	 * scripts are registered.
 	 *
 	 * @ticket 12009
 	 *
