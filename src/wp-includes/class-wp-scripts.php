@@ -1037,7 +1037,7 @@ JS;
 
 		// Consider each dependent and check if it is delayed.
 		foreach ( $dependents as $dependent ) {
-			// If the dependent script has no src (as it represents a script bundle), ignore it from consideration.
+			// If the dependent script has no src (as it represents an alias for a set of items), ignore it from consideration.
 			if ( empty( $this->registered[ $dependent ]->src ) ) {
 				continue;
 			}
@@ -1084,7 +1084,7 @@ JS;
 		/*
 		 * Handle known blocking strategy scenarios.
 		 * - An empty strategy is synonymous with blocking.
-		 * - A script bundle (where $src is false) must always be blocking since the after inline script cannot be
+		 * - A script alias (where $src is false) must always be blocking since the after inline script cannot be
 		 *   delayed as there is no external script tag and thus no load event at which the inline script can be run.
 		 */
 		if ( empty( $intended_strategy ) || empty( $this->registered[ $handle ]->src ) ) {
