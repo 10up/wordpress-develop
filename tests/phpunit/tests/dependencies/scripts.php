@@ -1417,7 +1417,7 @@ HTML
 	}
 
 	/**
-	 * Test script concatenation with deferred main script.
+	 * Tests that scripts registered with a deferred strategy are not included in the script concat loading query.
 	 *
 	 * @ticket 12009
 	 *
