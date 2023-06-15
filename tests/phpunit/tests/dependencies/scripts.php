@@ -488,7 +488,7 @@ HTML
 	}
 
 	/**
-	 * Test delayed dependency with non enqueued blocking dependent.
+	 * Tests that only enqueued dependents effect the eligible loading strategy.
 	 *
 	 * @ticket 12009
 	 *
