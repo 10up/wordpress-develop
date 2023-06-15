@@ -1127,7 +1127,7 @@ HTML
 	}
 
 	/**
-	 * Test valid defer loading with async dependent.
+	 * Tests that dependents that are async but attached to a deferred main script, print with defer as opposed to async.
 	 *
 	 * @ticket 12009
 	 *
