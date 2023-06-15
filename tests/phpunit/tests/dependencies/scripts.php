@@ -467,7 +467,7 @@ HTML
 	}
 
 	/**
-	 * Test delayed dependency with blocking dependent.
+	 * Tests that blocking dependents force delayed dependencies to become blocking.
 	 *
 	 * @ticket 12009
 	 *
