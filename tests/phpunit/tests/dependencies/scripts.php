@@ -1348,7 +1348,7 @@ HTML
 	}
 
 	/**
-	 * Tests that scripts print with no strategy when an incorrect strategy is passed.
+	 * Tests that scripts print with no strategy when an incorrect strategy is passed during script register/enqueue.
 	 *
 	 * For an invalid strategy defined during script registration, default to a blocking strategy.
 	 *
@@ -1371,6 +1371,7 @@ HTML
 	}
 
 	/**
+	 *
 	 * Test script strategy doing it wrong when calling wp_script_add_data().
 	 *
 	 * For an invalid strategy defined during script registration, default to a blocking strategy.
