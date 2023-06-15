@@ -609,7 +609,7 @@ HTML
 	}
 
 	/**
-	 * Test that has_only_delayed_dependents works as expected.
+	 * Tests that the has_only_delayed_dependents method works as expected and returns the correct value.
 	 *
 	 * @ticket 12009
 	 *
