@@ -1326,7 +1326,7 @@ HTML
 	}
 
 	/**
-	 * Test setting in_footer and strategy.
+	 * Tests that scripts print in the correct group (head/footer) when using in_footer and assigning a strategy.
 	 *
 	 * @ticket 12009
 	 *
