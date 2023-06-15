@@ -1195,7 +1195,7 @@ HTML
 	}
 
 	/**
-	 * Test that scripts registered for the head do indeed end up there.
+	 * Tests that scripts registered for printing in the head section, do end up there.
 	 *
 	 * @ticket 12009
 	 *
