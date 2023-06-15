@@ -1151,7 +1151,7 @@ HTML
 	}
 
 	/**
-	 * Test invalid defer loading strategy case.
+	 * Tests that scripts registered as defer become blocking when their dependents chain are all blocking.
 	 *
 	 * @ticket 12009
 	 *
