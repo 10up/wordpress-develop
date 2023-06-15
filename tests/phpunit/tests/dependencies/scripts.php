@@ -1348,7 +1348,7 @@ HTML
 	}
 
 	/**
-	 * Test script strategy doing it wrong when calling wp_register_script().
+	 * Tests that scripts print with no strategy when an incorrect strategy is passed.
 	 *
 	 * For an invalid strategy defined during script registration, default to a blocking strategy.
 	 *
