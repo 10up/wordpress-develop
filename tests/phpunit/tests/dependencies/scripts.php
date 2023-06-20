@@ -96,227 +96,6 @@ JS;
 	}
 
 	/**
-	 * Data provider for test_print_delayed_inline_script_loader_timing.
-	 *
-	 * @return array[]
-	 */
-	public function data_to_test_print_delayed_inline_script_loader_timing() {
-		/**
-		 * Enqueue script with defer strategy.
-		 *
-		 * @param string $handle    Handle.
-		 * @param bool   $in_footer In footer.
-		 */
-		$enqueue_script    = static function ( $handle, $in_footer = false, $deps = array() ) {
-			wp_enqueue_script(
-				$handle,
-				sprintf( 'https://example.com/%s.js', $handle ),
-				$deps,
-				null,
-				array(
-					'in_footer' => $in_footer,
-					'strategy'  => 'defer',
-				)
-			);
-		};
-
-		/**
-		 * Add inline after script.
-		 *
-		 * @param string $handle   Handle.
-		 * @param string $position Position.
-		 */
-		$add_inline_script = static function ( $handle, $position = 'after' ) {
-			wp_add_inline_script(
-				$handle,
-				"/*{$handle}-{$position}*/",
-				$position
-			);
-		};
-
-		return array(
-			'no_delayed_inline_scripts'                  => array(
-				'set_up'          => static function () use ( $enqueue_script ) {
-					$enqueue_script( 'foo-head', false );
-					$enqueue_script( 'foo-footer', true );
-				},
-				'expected_head'   => <<<HTML
-<script id="foo-head-js" src="https://example.com/foo-head.js" type="text/javascript" defer data-wp-strategy="defer"></script>
-HTML
-				,
-				'expected_torso'  => '',
-				'expected_footer' => <<<HTML
-<script id="foo-footer-js" src="https://example.com/foo-footer.js" type="text/javascript" defer data-wp-strategy="defer"></script>
-HTML
-				,
-			),
-			'delayed_inline_script_in_head_only'         => array(
-				'set_up'          => static function () use ( $enqueue_script, $add_inline_script ) {
-					$enqueue_script( 'foo-head', false );
-					$add_inline_script( 'foo-head' );
-				},
-				'expected_head'   => $this->get_delayed_inline_script_loader_script_tag() . <<<HTML
-<script id="foo-head-js" src="https://example.com/foo-head.js" type="text/javascript" defer data-wp-strategy="defer"></script>
-<script id="foo-head-js-after" type="text/plain">
-/*foo-head-after*/
-</script>
-HTML
-				,
-				'expected_torso'  => '',
-				'expected_footer' => '',
-			),
-			'delayed_inline_script_in_footer_only'       => array(
-				'set_up'          => static function () use ( $enqueue_script, $add_inline_script ) {
-					$enqueue_script( 'foo-footer', true );
-					$add_inline_script( 'foo-footer' );
-				},
-				/*
-				 * TODO: This script is getting output even though it isn't needed yet. It could be printed in the footer instead.
-				 * In order to handle this case, the logic to determine whether the script needs to be printed would have to
-				 * take into account the current group being printed. If we're printing the head scripts, but none of the
-				 * head scripts are delayed, then the script wouldn't have to be printed.
-				 */
-				'expected_head'   => $this->get_delayed_inline_script_loader_script_tag(),
-				'expected_torso'  => '',
-				'expected_footer' => <<<HTML
-<script id="foo-footer-js" src="https://example.com/foo-footer.js" type="text/javascript" defer data-wp-strategy="defer"></script>
-<script id="foo-footer-js-after" type="text/plain">
-/*foo-footer-after*/
-</script>
-HTML
-				,
-			),
-			'delayed_inline_script_in_both_head_and_footer' => array(
-				'set_up'          => static function () use ( $enqueue_script, $add_inline_script ) {
-					foreach ( array( false, true ) as $in_footer ) {
-						$handle = $in_footer ? 'foo-footer' : 'foo-head';
-						$enqueue_script( $handle, $in_footer );
-						$add_inline_script( $handle );
-					}
-				},
-				'expected_head'   => $this->get_delayed_inline_script_loader_script_tag() . <<<HTML
-<script id="foo-head-js" src="https://example.com/foo-head.js" type="text/javascript" defer data-wp-strategy="defer"></script>
-<script id="foo-head-js-after" type="text/plain">
-/*foo-head-after*/
-</script>
-HTML
-				,
-				'expected_torso'  => '',
-				'expected_footer' => <<<HTML
-<script id="foo-footer-js" src="https://example.com/foo-footer.js" type="text/javascript" defer data-wp-strategy="defer"></script>
-<script id="foo-footer-js-after" type="text/plain">
-/*foo-footer-after*/
-</script>
-HTML
-				,
-			),
-			'delayed_inline_script_enqueued_in_torso_for_footer' => array(
-				'set_up'          => static function () use ( $enqueue_script, $add_inline_script ) {
-					add_action(
-						'test_torso',
-						static function () use ( $enqueue_script, $add_inline_script ) {
-							$enqueue_script( 'foo-footer', true );
-							$add_inline_script( 'foo-footer' );
-						}
-					);
-				},
-				'expected_head'   => '',
-				'expected_torso'  => '',
-				'expected_footer' => $this->get_delayed_inline_script_loader_script_tag() . <<<HTML
-<script id="foo-footer-js" src="https://example.com/foo-footer.js" type="text/javascript" defer data-wp-strategy="defer"></script>
-<script id="foo-footer-js-after" type="text/plain">
-/*foo-footer-after*/
-</script>
-HTML
-			,
-			),
-			'delayed_inline_printed_in_torso'            => array(
-				'set_up'          => static function () use ( $enqueue_script, $add_inline_script ) {
-					add_action(
-						'test_torso',
-						static function () use ( $enqueue_script, $add_inline_script ) {
-							wp_register_script( 'foo-torso', 'https://example.com/foo-torso.js', array(), null, array( 'strategy' => 'defer' ) );
-							$add_inline_script( 'foo-torso' );
-							wp_print_scripts( array( 'foo-torso' ) );
-						}
-					);
-				},
-				'expected_head'   => '',
-				'expected_torso'  => $this->get_delayed_inline_script_loader_script_tag() . <<<HTML
-<script id="foo-torso-js" src="https://example.com/foo-torso.js" type="text/javascript" defer data-wp-strategy="defer"></script>
-<script id="foo-torso-js-after" type="text/plain">
-/*foo-torso-after*/
-</script>
-HTML
-				,
-				'expected_footer' => '',
-			),
-			'delayed_script_registered_but_not_enqueued' => array(
-				'set_up'          => static function () use ( $enqueue_script, $add_inline_script ) {
-					wp_register_script( 'not-enqueued', 'https://example.com/not-enqueued.js', array(), null, array( 'strategy' => 'defer' ) );
-					$add_inline_script( 'not-enqueued', 'after' );
-
-					wp_enqueue_script( 'enqueued', 'https://example.com/enqueued.js', array(), null );
-					$add_inline_script( 'enqueued', 'after' );
-				},
-				'expected_head'   => <<<HTML
-<script id="enqueued-js" src="https://example.com/enqueued.js" type="text/javascript"></script>
-<script id="enqueued-js-after" type="text/javascript">
-/*enqueued-after*/
-</script>
-HTML
-				,
-				'expected_torso'  => '',
-				'expected_footer' => '',
-			),
-		);
-	}
-
-	/**
-	 * Tests that wp_print_delayed_inline_script_loader() is output before the first delayed inline script and not
-	 * duplicated in header and footer.
-	 *
-	 * @covers WP_Scripts::print_delayed_inline_script_loader
-	 *
-	 * @dataProvider data_to_test_print_delayed_inline_script_loader_timing
-	 * @param callable $set_up          Set up.
-	 * @param string   $expected_head   Expected head.
-	 * @param string   $expected_torso  Expected torso.
-	 * @param string   $expected_footer Expected footer.
-	 */
-	public function test_print_delayed_inline_script_loader_timing( $set_up, $expected_head, $expected_torso, $expected_footer ) {
-		$set_up();
-
-		// Note that test_head, test_enqueue_scripts, and test_footer are used instead of their wp_* actions to avoid triggering core actions.
-		add_action(
-			'test_head',
-			static function () {
-				do_action( 'test_enqueue_scripts' );
-			},
-			1 // Priority corresponds to wp_head in default-filters.php.
-		);
-		add_action( 'test_head', 'wp_print_head_scripts', 9 ); // Priority corresponds to wp_head in default-filters.php.
-		add_action( 'test_footer', 'wp_print_footer_scripts', 20 ); // Priority corresponds to wp_footer in default-filters.php.
-
-		$actual_head   = get_echo( 'do_action', array( 'test_head' ) );
-		$actual_torso  = get_echo( 'do_action', array( 'test_torso' ) );
-		$actual_footer = get_echo( 'do_action', array( 'test_footer' ) );
-
-		$delayed_script_count = substr_count( $actual_head . $actual_torso . $actual_footer, $this->get_delayed_inline_script_loader_script_tag() );
-		if ( wp_scripts()->has_delayed_inline_script( wp_scripts()->done ) ) {
-			$this->assertSame( 1, $delayed_script_count, 'Expected delayed inline script to occur exactly once.' );
-		} else {
-			$this->assertSame( 0, $delayed_script_count, 'Expected delayed inline script to not occur since no delayed inline scripts.' );
-		}
-
-		$this->assertLessThanOrEqual( 1, $delayed_script_count, 'Expected delayed-inline-script-loader to occur at most once.' );
-
-		$this->assertEqualMarkup( $actual_head, $expected_head, 'Expected head to match.' );
-		$this->assertEqualMarkup( $actual_torso, $expected_torso, 'Expected torso to match.' );
-		$this->assertEqualMarkup( $actual_footer, $expected_footer, 'Expected footer to match.' );
-	}
-
-	/**
 	 * Tests that inline scripts in the `after` position, attached to delayed main scripts, remain unaffected.
 	 *
 	 * If the main script with delayed loading strategy has an `after` inline script,
@@ -326,7 +105,6 @@ HTML
 	 *
 	 * @covers WP_Scripts::do_item
 	 * @covers WP_Scripts::get_inline_script_tag
-	 * @covers WP_Scripts::print_delayed_inline_script_loader
 	 * @covers ::wp_add_inline_script
 	 * @covers ::wp_enqueue_script
 	 *
@@ -338,13 +116,11 @@ HTML
 		wp_enqueue_script( 'ms-isa-1', 'http://example.org/ms-isa-1.js', array(), null, compact( 'strategy' ) );
 		wp_add_inline_script( 'ms-isa-1', 'console.log("after one");', 'after' );
 		$output    = get_echo( 'wp_print_scripts' );
-		$expected  = $this->get_delayed_inline_script_loader_script_tag();
-		$expected .= "<script type='text/javascript' src='http://example.org/ms-isa-1.js' id='ms-isa-1-js' {$strategy} data-wp-strategy='{$strategy}'></script>\n";
+		$expected  = "<script type='text/javascript' src='http://example.org/ms-isa-1.js' id='ms-isa-1-js' data-wp-strategy='{$strategy}'></script>\n";
 		$expected .= wp_get_inline_script_tag(
 			"console.log(\"after one\");\n",
 			array(
-				'id'   => 'ms-isa-1-js-after',
-				'type' => 'text/plain',
+				'id' => 'ms-isa-1-js-after',
 			)
 		);
 		$this->assertSame( $expected, $output, 'Inline scripts in the "after" position, that are attached to a deferred main script, are failing to print/execute.' );
@@ -403,22 +179,20 @@ HTML
 		wp_add_inline_script( 'ms-i1-1', 'console.log("before last");', 'before' );
 		$output = get_echo( 'wp_print_scripts' );
 
-		$expected  = $this->get_delayed_inline_script_loader_script_tag();
-		$expected .= wp_get_inline_script_tag(
+		$expected  = wp_get_inline_script_tag(
 			"console.log(\"before first\");\n",
 			array(
 				'id' => 'ds-i1-1-js-before',
 			)
 		);
-		$expected .= "<script type='text/javascript' src='http://example.org/ds-i1-1.js' id='ds-i1-1-js' {$strategy} data-wp-strategy='{$strategy}'></script>\n";
-		$expected .= "<script type='text/javascript' src='http://example.org/ds-i1-2.js' id='ds-i1-2-js' {$strategy} data-wp-strategy='{$strategy}'></script>\n";
-		$expected .= "<script type='text/javascript' src='http://example.org/ds-i1-3.js' id='ds-i1-3-js' {$strategy} data-wp-strategy='{$strategy}'></script>\n";
+		$expected .= "<script type='text/javascript' src='http://example.org/ds-i1-1.js' id='ds-i1-1-js' $strategy data-wp-strategy='{$strategy}'></script>\n";
+		$expected .= "<script type='text/javascript' src='http://example.org/ds-i1-2.js' id='ds-i1-2-js' $strategy data-wp-strategy='{$strategy}'></script>\n";
+		$expected .= "<script type='text/javascript' src='http://example.org/ds-i1-3.js' id='ds-i1-3-js' $strategy data-wp-strategy='{$strategy}'></script>\n";
 		$expected .= wp_get_inline_script_tag(
 			"console.log(\"before last\");\n",
 			array(
 				'id'           => 'ms-i1-1-js-before',
-				'type'         => 'text/plain',
-				'data-wp-deps' => 'ds-i1-1,ds-i1-2,ds-i1-3',
+				'type'         => 'text/javascript',
 			)
 		);
 		$expected .= "<script type='text/javascript' src='http://example.org/ms-i1-1.js' id='ms-i1-1-js' {$strategy} data-wp-strategy='{$strategy}'></script>\n";
@@ -697,7 +471,7 @@ HTML
 						$this->add_test_inline_script( $handle, 'after' );
 					}
 				},
-				'expected_markup' => $this->get_delayed_inline_script_loader_script_tag() . <<<HTML
+				'expected_markup' => <<<HTML
 <script id="blocking-not-async-without-dependency-js-before" type="text/javascript">
 scriptEventLog.push( "blocking-not-async-without-dependency: before inline" )
 </script>
@@ -708,8 +482,8 @@ scriptEventLog.push( "blocking-not-async-without-dependency: after inline" )
 <script id="async-with-blocking-dependency-js-before" type="text/javascript">
 scriptEventLog.push( "async-with-blocking-dependency: before inline" )
 </script>
-<script type='text/javascript' src='https://example.com/external.js?script_event_log=async-with-blocking-dependency:%20script' id='async-with-blocking-dependency-js' async data-wp-strategy='async'></script>
-<script id="async-with-blocking-dependency-js-after" type="text/plain" data-wp-deps="blocking-not-async-without-dependency">
+<script type='text/javascript' src='https://example.com/external.js?script_event_log=async-with-blocking-dependency:%20script' id='async-with-blocking-dependency-js' data-wp-strategy='async'></script>
+<script id="async-with-blocking-dependency-js-after" type="text/javascript">
 scriptEventLog.push( "async-with-blocking-dependency: after inline" )
 </script>
 HTML
@@ -734,26 +508,26 @@ HTML
 						$this->add_test_inline_script( $handle, 'after' );
 					}
 				},
-				'expected_markup' => $this->get_delayed_inline_script_loader_script_tag() . <<<HTML
+				'expected_markup' => <<<HTML
 <script id="async-no-dependency-js-before" type="text/javascript">
 scriptEventLog.push( "async-no-dependency: before inline" )
 </script>
-<script type='text/javascript' src='https://example.com/external.js?script_event_log=async-no-dependency:%20script' id='async-no-dependency-js' async data-wp-strategy='async'></script>
-<script id="async-no-dependency-js-after" type="text/plain">
+<script type='text/javascript' src='https://example.com/external.js?script_event_log=async-no-dependency:%20script' id='async-no-dependency-js' data-wp-strategy='async'></script>
+<script id="async-no-dependency-js-after" type="text/javascript">
 scriptEventLog.push( "async-no-dependency: after inline" )
 </script>
-<script id="async-one-async-dependency-js-before" type="text/plain" data-wp-deps="async-no-dependency">
+<script id="async-one-async-dependency-js-before" type="text/javascript">
 scriptEventLog.push( "async-one-async-dependency: before inline" )
 </script>
-<script type='text/javascript' src='https://example.com/external.js?script_event_log=async-one-async-dependency:%20script' id='async-one-async-dependency-js' async data-wp-strategy='async'></script>
-<script id="async-one-async-dependency-js-after" type="text/plain" data-wp-deps="async-no-dependency">
+<script type='text/javascript' src='https://example.com/external.js?script_event_log=async-one-async-dependency:%20script' id='async-one-async-dependency-js' data-wp-strategy='async'></script>
+<script id="async-one-async-dependency-js-after" type="text/javascript">
 scriptEventLog.push( "async-one-async-dependency: after inline" )
 </script>
-<script id="async-two-async-dependencies-js-before" type="text/plain" data-wp-deps="async-no-dependency,async-one-async-dependency">
+<script id="async-two-async-dependencies-js-before" type="text/javascript">
 scriptEventLog.push( "async-two-async-dependencies: before inline" )
 </script>
-<script type='text/javascript' src='https://example.com/external.js?script_event_log=async-two-async-dependencies:%20script' id='async-two-async-dependencies-js' async data-wp-strategy='async'></script>
-<script id="async-two-async-dependencies-js-after" type="text/plain" data-wp-deps="async-no-dependency,async-one-async-dependency">
+<script type='text/javascript' src='https://example.com/external.js?script_event_log=async-two-async-dependencies:%20script' id='async-two-async-dependencies-js' data-wp-strategy='async'></script>
+<script id="async-two-async-dependencies-js-after" type="text/javascript">
 scriptEventLog.push( "async-two-async-dependencies: after inline" )
 </script>
 HTML
@@ -799,19 +573,19 @@ HTML
 						$this->add_test_inline_script( $handle, 'after' );
 					}
 				},
-				'expected_markup' => $this->get_delayed_inline_script_loader_script_tag() . <<<HTML
+				'expected_markup' => <<<HTML
 <script id="async-with-defer-dependent-js-before" type="text/javascript">
 scriptEventLog.push( "async-with-defer-dependent: before inline" )
 </script>
-<script type='text/javascript' src='https://example.com/external.js?script_event_log=async-with-defer-dependent:%20script' id='async-with-defer-dependent-js' defer data-wp-strategy='async'></script>
-<script id="async-with-defer-dependent-js-after" type="text/plain">
+<script type='text/javascript' src='https://example.com/external.js?script_event_log=async-with-defer-dependent:%20script' id='async-with-defer-dependent-js' data-wp-strategy='async'></script>
+<script id="async-with-defer-dependent-js-after" type="text/javascript">
 scriptEventLog.push( "async-with-defer-dependent: after inline" )
 </script>
-<script id="defer-dependent-of-async-js-before" type="text/plain" data-wp-deps="async-with-defer-dependent">
+<script id="defer-dependent-of-async-js-before" type="text/javascript">
 scriptEventLog.push( "defer-dependent-of-async: before inline" )
 </script>
-<script type='text/javascript' src='https://example.com/external.js?script_event_log=defer-dependent-of-async:%20script' id='defer-dependent-of-async-js' defer data-wp-strategy='defer'></script>
-<script id="defer-dependent-of-async-js-after" type="text/plain" data-wp-deps="async-with-defer-dependent">
+<script type='text/javascript' src='https://example.com/external.js?script_event_log=defer-dependent-of-async:%20script' id='defer-dependent-of-async-js' data-wp-strategy='defer'></script>
+<script id="defer-dependent-of-async-js-after" type="text/javascript">
 scriptEventLog.push( "defer-dependent-of-async: after inline" )
 </script>
 HTML
@@ -831,7 +605,7 @@ HTML
 					$this->add_test_inline_script( $handle2, 'before' );
 					$this->add_test_inline_script( $handle2, 'after' );
 				},
-				'expected_markup' => $this->get_delayed_inline_script_loader_script_tag() . <<<HTML
+				'expected_markup' => <<<HTML
 <script id="blocking-bundle-of-none-js-before" type="text/javascript">
 scriptEventLog.push( "blocking-bundle-of-none: before inline" )
 </script>
@@ -841,8 +615,8 @@ scriptEventLog.push( "blocking-bundle-of-none: after inline" )
 <script id="defer-dependent-of-blocking-bundle-of-none-js-before" type="text/javascript">
 scriptEventLog.push( "defer-dependent-of-blocking-bundle-of-none: before inline" )
 </script>
-<script type='text/javascript' src='https://example.com/external.js?script_event_log=defer-dependent-of-blocking-bundle-of-none:%20script' id='defer-dependent-of-blocking-bundle-of-none-js' defer data-wp-strategy='defer'></script>
-<script id="defer-dependent-of-blocking-bundle-of-none-js-after" type="text/plain">
+<script type='text/javascript' src='https://example.com/external.js?script_event_log=defer-dependent-of-blocking-bundle-of-none:%20script' id='defer-dependent-of-blocking-bundle-of-none-js' data-wp-strategy='defer'></script>
+<script id="defer-dependent-of-blocking-bundle-of-none-js-after" type="text/javascript">
 scriptEventLog.push( "defer-dependent-of-blocking-bundle-of-none: after inline" )
 </script>
 HTML
@@ -865,7 +639,7 @@ HTML
 						$this->add_test_inline_script( $handle, 'after' );
 					}
 				},
-				'expected_markup' => $this->get_delayed_inline_script_loader_script_tag() . <<<HTML
+				'expected_markup' => <<<HTML
 <script id="blocking-bundle-member-one-js-before" type="text/javascript">
 scriptEventLog.push( "blocking-bundle-member-one: before inline" )
 </script>
@@ -883,8 +657,8 @@ scriptEventLog.push( "blocking-bundle-member-two: after inline" )
 <script id="defer-dependent-of-blocking-bundle-of-two-js-before" type="text/javascript">
 scriptEventLog.push( "defer-dependent-of-blocking-bundle-of-two: before inline" )
 </script>
-<script type='text/javascript' src='https://example.com/external.js?script_event_log=defer-dependent-of-blocking-bundle-of-two:%20script' id='defer-dependent-of-blocking-bundle-of-two-js' defer data-wp-strategy='defer'></script>
-<script id="defer-dependent-of-blocking-bundle-of-two-js-after" type="text/plain" data-wp-deps="blocking-bundle-member-one,blocking-bundle-member-two">
+<script type='text/javascript' src='https://example.com/external.js?script_event_log=defer-dependent-of-blocking-bundle-of-two:%20script' id='defer-dependent-of-blocking-bundle-of-two-js' data-wp-strategy='defer'></script>
+<script id="defer-dependent-of-blocking-bundle-of-two-js-after" type="text/javascript">
 scriptEventLog.push( "defer-dependent-of-blocking-bundle-of-two: after inline" )
 </script>
 HTML
@@ -906,7 +680,7 @@ HTML
 					$this->add_test_inline_script( $handle2, 'before' );
 					$this->add_test_inline_script( $handle2, 'after' );
 				},
-				'expected_markup' => $this->get_delayed_inline_script_loader_script_tag() . <<<HTML
+				'expected_markup' => <<<HTML
 <script id="defer-bundle-of-none-js-before" type="text/javascript">
 scriptEventLog.push( "defer-bundle-of-none: before inline" )
 </script>
@@ -916,8 +690,8 @@ scriptEventLog.push( "defer-bundle-of-none: after inline" )
 <script id="defer-dependent-of-defer-bundle-of-none-js-before" type="text/javascript">
 scriptEventLog.push( "defer-dependent-of-defer-bundle-of-none: before inline" )
 </script>
-<script type='text/javascript' src='https://example.com/external.js?script_event_log=defer-dependent-of-defer-bundle-of-none:%20script' id='defer-dependent-of-defer-bundle-of-none-js' defer data-wp-strategy='defer'></script>
-<script id="defer-dependent-of-defer-bundle-of-none-js-after" type="text/plain">
+<script type='text/javascript' src='https://example.com/external.js?script_event_log=defer-dependent-of-defer-bundle-of-none:%20script' id='defer-dependent-of-defer-bundle-of-none-js' data-wp-strategy='defer'></script>
+<script id="defer-dependent-of-defer-bundle-of-none-js-after" type="text/javascript">
 scriptEventLog.push( "defer-dependent-of-defer-bundle-of-none: after inline" )
 </script>
 HTML
@@ -937,7 +711,7 @@ HTML
 						$this->add_test_inline_script( $dep, 'after' );
 					}
 				},
-				'expected_markup' => $this->get_delayed_inline_script_loader_script_tag() . <<<HTML
+				'expected_markup' => <<<HTML
 <script id="blocking-dependency-with-defer-following-dependency-js-before" type="text/javascript">
 scriptEventLog.push( "blocking-dependency-with-defer-following-dependency: before inline" )
 </script>
@@ -948,15 +722,15 @@ scriptEventLog.push( "blocking-dependency-with-defer-following-dependency: after
 <script id="defer-dependency-with-blocking-preceding-dependency-js-before" type="text/javascript">
 scriptEventLog.push( "defer-dependency-with-blocking-preceding-dependency: before inline" )
 </script>
-<script type='text/javascript' src='https://example.com/external.js?script_event_log=defer-dependency-with-blocking-preceding-dependency:%20script' id='defer-dependency-with-blocking-preceding-dependency-js' defer data-wp-strategy='defer'></script>
-<script id="defer-dependency-with-blocking-preceding-dependency-js-after" type="text/plain">
+<script type='text/javascript' src='https://example.com/external.js?script_event_log=defer-dependency-with-blocking-preceding-dependency:%20script' id='defer-dependency-with-blocking-preceding-dependency-js' data-wp-strategy='defer'></script>
+<script id="defer-dependency-with-blocking-preceding-dependency-js-after" type="text/javascript">
 scriptEventLog.push( "defer-dependency-with-blocking-preceding-dependency: after inline" )
 </script>
-<script id="defer-dependent-of-blocking-and-defer-dependencies-js-before" type="text/plain" data-wp-deps="blocking-dependency-with-defer-following-dependency,defer-dependency-with-blocking-preceding-dependency">
+<script id="defer-dependent-of-blocking-and-defer-dependencies-js-before" type="text/javascript">
 scriptEventLog.push( "defer-dependent-of-blocking-and-defer-dependencies: before inline" )
 </script>
-<script type='text/javascript' src='https://example.com/external.js?script_event_log=defer-dependent-of-blocking-and-defer-dependencies:%20script' id='defer-dependent-of-blocking-and-defer-dependencies-js' defer data-wp-strategy='defer'></script>
-<script id="defer-dependent-of-blocking-and-defer-dependencies-js-after" type="text/plain" data-wp-deps="blocking-dependency-with-defer-following-dependency,defer-dependency-with-blocking-preceding-dependency">
+<script type='text/javascript' src='https://example.com/external.js?script_event_log=defer-dependent-of-blocking-and-defer-dependencies:%20script' id='defer-dependent-of-blocking-and-defer-dependencies-js' data-wp-strategy='defer'></script>
+<script id="defer-dependent-of-blocking-and-defer-dependencies-js-after" type="text/javascript">
 scriptEventLog.push( "defer-dependent-of-blocking-and-defer-dependencies: after inline" )
 </script>
 HTML
@@ -976,12 +750,12 @@ HTML
 						$this->add_test_inline_script( $dep, 'after' );
 					}
 				},
-				'expected_markup' => $this->get_delayed_inline_script_loader_script_tag() . <<<HTML
+				'expected_markup' => <<<HTML
 <script id="defer-dependency-with-blocking-following-dependency-js-before" type="text/javascript">
 scriptEventLog.push( "defer-dependency-with-blocking-following-dependency: before inline" )
 </script>
-<script type='text/javascript' src='https://example.com/external.js?script_event_log=defer-dependency-with-blocking-following-dependency:%20script' id='defer-dependency-with-blocking-following-dependency-js' defer data-wp-strategy='defer'></script>
-<script id="defer-dependency-with-blocking-following-dependency-js-after" type="text/plain">
+<script type='text/javascript' src='https://example.com/external.js?script_event_log=defer-dependency-with-blocking-following-dependency:%20script' id='defer-dependency-with-blocking-following-dependency-js' data-wp-strategy='defer'></script>
+<script id="defer-dependency-with-blocking-following-dependency-js-after" type="text/javascript">
 scriptEventLog.push( "defer-dependency-with-blocking-following-dependency: after inline" )
 </script>
 <script id="blocking-dependency-with-defer-preceding-dependency-js-before" type="text/javascript">
@@ -991,11 +765,11 @@ scriptEventLog.push( "blocking-dependency-with-defer-preceding-dependency: befor
 <script id="blocking-dependency-with-defer-preceding-dependency-js-after" type="text/javascript">
 scriptEventLog.push( "blocking-dependency-with-defer-preceding-dependency: after inline" )
 </script>
-<script id="defer-dependent-of-defer-and-blocking-dependencies-js-before" type="text/plain" data-wp-deps="defer-dependency-with-blocking-following-dependency,blocking-dependency-with-defer-preceding-dependency">
+<script id="defer-dependent-of-defer-and-blocking-dependencies-js-before" type="text/javascript">
 scriptEventLog.push( "defer-dependent-of-defer-and-blocking-dependencies: before inline" )
 </script>
-<script type='text/javascript' src='https://example.com/external.js?script_event_log=defer-dependent-of-defer-and-blocking-dependencies:%20script' id='defer-dependent-of-defer-and-blocking-dependencies-js' defer data-wp-strategy='defer'></script>
-<script id="defer-dependent-of-defer-and-blocking-dependencies-js-after" type="text/plain" data-wp-deps="defer-dependency-with-blocking-following-dependency,blocking-dependency-with-defer-preceding-dependency">
+<script type='text/javascript' src='https://example.com/external.js?script_event_log=defer-dependent-of-defer-and-blocking-dependencies:%20script' id='defer-dependent-of-defer-and-blocking-dependencies-js' data-wp-strategy='defer'></script>
+<script id="defer-dependent-of-defer-and-blocking-dependencies-js-after" type="text/javascript">
 scriptEventLog.push( "defer-dependent-of-defer-and-blocking-dependencies: after inline" )
 </script>
 HTML
@@ -1012,19 +786,19 @@ HTML
 						$this->add_test_inline_script( $handle, 'after' );
 					}
 				},
-				'expected_markup' => $this->get_delayed_inline_script_loader_script_tag() . <<<HTML
+				'expected_markup' => <<<HTML
 <script id="defer-with-async-dependent-js-before" type="text/javascript">
 scriptEventLog.push( "defer-with-async-dependent: before inline" )
 </script>
-<script type='text/javascript' src='https://example.com/external.js?script_event_log=defer-with-async-dependent:%20script' id='defer-with-async-dependent-js' defer data-wp-strategy='defer'></script>
-<script id="defer-with-async-dependent-js-after" type="text/plain">
+<script type='text/javascript' src='https://example.com/external.js?script_event_log=defer-with-async-dependent:%20script' id='defer-with-async-dependent-js' data-wp-strategy='defer'></script>
+<script id="defer-with-async-dependent-js-after" type="text/javascript">
 scriptEventLog.push( "defer-with-async-dependent: after inline" )
 </script>
-<script id="async-dependent-of-defer-js-before" type="text/plain" data-wp-deps="defer-with-async-dependent">
+<script id="async-dependent-of-defer-js-before" type="text/javascript">
 scriptEventLog.push( "async-dependent-of-defer: before inline" )
 </script>
-<script type='text/javascript' src='https://example.com/external.js?script_event_log=async-dependent-of-defer:%20script' id='async-dependent-of-defer-js' async data-wp-strategy='async'></script>
-<script id="async-dependent-of-defer-js-after" type="text/plain" data-wp-deps="defer-with-async-dependent">
+<script type='text/javascript' src='https://example.com/external.js?script_event_log=async-dependent-of-defer:%20script' id='async-dependent-of-defer-js' data-wp-strategy='async'></script>
+<script id="async-dependent-of-defer-js-after" type="text/javascript">
 scriptEventLog.push( "async-dependent-of-defer: after inline" )
 </script>
 HTML
@@ -1052,9 +826,9 @@ HTML
 					$this->enqueue_test_script( $handle, 'defer', array() );
 					$this->add_test_inline_script( $handle, 'after' );
 				},
-				'expected_markup' => $this->get_delayed_inline_script_loader_script_tag() . <<<HTML
-<script type='text/javascript' src='https://example.com/external.js?script_event_log=defer-with-after-inline:%20script' id='defer-with-after-inline-js' defer data-wp-strategy='defer'></script>
-<script id="defer-with-after-inline-js-after" type="text/plain">
+				'expected_markup' => <<<HTML
+<script type='text/javascript' src='https://example.com/external.js?script_event_log=defer-with-after-inline:%20script' id='defer-with-after-inline-js' data-wp-strategy='defer'></script>
+<script id="defer-with-after-inline-js-after" type="text/javascript">
 scriptEventLog.push( "defer-with-after-inline: after inline" )
 </script>
 HTML
@@ -1095,15 +869,15 @@ HTML
 					$this->add_test_inline_script( 'defer-dependent-of-nested-aliases', 'before' );
 					$this->add_test_inline_script( 'defer-dependent-of-nested-aliases', 'after' );
 				},
-				'expected_markup' => $this->get_delayed_inline_script_loader_script_tag() . <<<HTML
-<script type='text/javascript' src='https://example.com/external.js?script_event_log=inner-bundle-member-one:%20script' id='inner-bundle-member-one-js' defer data-wp-strategy='defer'></script>
-<script type='text/javascript' src='https://example.com/external.js?script_event_log=inner-bundle-member-two:%20script' id='inner-bundle-member-two-js' defer data-wp-strategy='defer'></script>
+				'expected_markup' => <<<HTML
+<script type='text/javascript' src='https://example.com/external.js?script_event_log=inner-bundle-member-one:%20script' id='inner-bundle-member-one-js' data-wp-strategy='defer'></script>
+<script type='text/javascript' src='https://example.com/external.js?script_event_log=inner-bundle-member-two:%20script' id='inner-bundle-member-two-js' data-wp-strategy='defer'></script>
 <script type='text/javascript' src='https://example.com/external.js?script_event_log=outer-bundle-leaf-member:%20script' id='outer-bundle-leaf-member-js'></script>
-<script id="defer-dependent-of-nested-aliases-js-before" type="text/plain" data-wp-deps="inner-bundle-member-one,inner-bundle-member-two,outer-bundle-leaf-member">
+<script id="defer-dependent-of-nested-aliases-js-before" type="text/javascript">
 scriptEventLog.push( "defer-dependent-of-nested-aliases: before inline" )
 </script>
-<script type='text/javascript' src='https://example.com/external.js?script_event_log=defer-dependent-of-nested-aliases:%20script' id='defer-dependent-of-nested-aliases-js' defer data-wp-strategy='defer'></script>
-<script id="defer-dependent-of-nested-aliases-js-after" type="text/plain" data-wp-deps="inner-bundle-member-one,inner-bundle-member-two,outer-bundle-leaf-member">
+<script type='text/javascript' src='https://example.com/external.js?script_event_log=defer-dependent-of-nested-aliases:%20script' id='defer-dependent-of-nested-aliases-js' data-wp-strategy='defer'></script>
+<script id="defer-dependent-of-nested-aliases-js-after" type="text/javascript">
 scriptEventLog.push( "defer-dependent-of-nested-aliases: after inline" )
 </script>
 HTML
@@ -1138,9 +912,7 @@ HTML
 	 * @covers ::wp_enqueue_script()
 	 * @covers ::wp_add_inline_script()
 	 * @covers ::wp_print_scripts()
-	 * @covers WP_Scripts::should_delay_inline_script
 	 * @covers WP_Scripts::get_inline_script_tag
-	 * @covers WP_Scripts::has_delayed_inline_script
 	 *
 	 * @dataProvider data_provider_to_test_various_strategy_dependency_chains
 	 *
@@ -2407,7 +2179,7 @@ HTML
 				),
 				'delayed'        => true,
 				'expected_data'  => '/*before foo 1*/',
-				'expected_tag'   => "<script id='foo-js-before' type='text/plain' data-wp-deps='dep'>\n/*before foo 1*/\n</script>\n",
+				'expected_tag'   => "<script id='foo-js-before' type='text/javascript'>\n/*before foo 1*/\n</script>\n",
 			),
 			'after-delayed'   => array(
 				'position'       => 'after',
@@ -2417,7 +2189,7 @@ HTML
 				),
 				'delayed'        => true,
 				'expected_data'  => "/*after foo 1*/\n/*after foo 2*/",
-				'expected_tag'   => "<script id='foo-js-after' type='text/plain' data-wp-deps='dep'>\n/*after foo 1*/\n/*after foo 2*/\n</script>\n",
+				'expected_tag'   => "<script id='foo-js-after' type='text/javascript'>\n/*after foo 1*/\n/*after foo 2*/\n</script>\n",
 			),
 		);
 	}
@@ -3128,38 +2900,6 @@ HTML
 		$expected .= "<script type='text/javascript' src='/default/common.js' id='common-js'></script>\n";
 
 		$this->assertSame( $expected, $print_scripts );
-	}
-
-	/**
-	 * Gets the script tag for the delayed inline script loader.
-	 *
-	 * @return string Script tag.
-	 */
-	protected function get_delayed_inline_script_loader_script_tag() {
-		/*
-		 * Ensure the built delayed inline script loader file exists
-		 * when the test suite is run from the 'src' directory.
-		 *
-		 * Note this should no longer be needed as of https://core.trac.wordpress.org/ticket/57844.
-		 */
-		$build_path = ABSPATH . WPINC . '/js/wp-delayed-inline-script-loader' . wp_scripts_get_suffix() . '.js';
-
-		if ( ! file_exists( $build_path ) ) {
-			$src_path = ABSPATH . 'js/_enqueues/lib/delayed-inline-script-loader.js';
-
-			$file_contents = file_get_contents( $src_path );
-
-			self::touch( $build_path );
-			file_put_contents(
-				$build_path,
-				$file_contents
-			);
-		}
-
-		return wp_get_inline_script_tag(
-			file_get_contents( $build_path ),
-			array( 'id' => 'wp-delayed-inline-script-loader' )
-		);
 	}
 
 	/**
