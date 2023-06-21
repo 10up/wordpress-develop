@@ -917,13 +917,19 @@ JS;
 		$checked[ $handle ] = true;
 		$dependents         = $this->get_dependents( $handle );
 
-		// If there are no dependents remaining to consider, the script can be delayed.
+		// If there are no dependents remaining to consider, and if the handle does not have `after` inline scripts
+		// associated with it, the script can be delayed.
 		if ( empty( $dependents ) ) {
-			return true;
+			return ! $this->has_inline_script( $handle, 'after' );
 		}
 
 		// Consider each dependent and check if it is delayed.
 		foreach ( $dependents as $dependent ) {
+			// Do not defer if there are any `after` inline scripts associated with the dependent.
+			if ( $this->has_inline_script( $handle, 'after' ) ) {
+				return false;
+			}
+
 			if ( ! isset( $this->registered[ $dependent ] ) ) {
 				continue;
 			}
