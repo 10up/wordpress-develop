@@ -899,118 +899,89 @@ JS;
 	}
 
 	/**
-	 * Checks if all of a script's dependents are delayed, which is required to maintain execution order.
-	 *
-	 * @since 6.3.0
-	 *
-	 * @param string              $handle     The script handle.
-	 * @param bool                $async_only Whether to limit to async strategy only.
-	 * @param array<string, true> $checked    Optional. An array of already checked script handles, used to avoid recursive loops.
-	 * @return bool True if all dependents are delayed, false otherwise.
-	 */
-	private function has_only_delayed_dependents( $handle, $async_only = false, $checked = array() ) {
-		// If this node was already checked, this script can be delayed and the branch ends.
-		if ( isset( $checked[ $handle ] ) ) {
-			return true;
-		}
-
-		$checked[ $handle ] = true;
-		$dependents         = $this->get_dependents( $handle );
-
-		// If there are no dependents remaining to consider, and if the handle does not have `after` inline scripts
-		// associated with it, the script can be delayed.
-		if ( empty( $dependents ) ) {
-			return ! $this->has_inline_script( $handle, 'after' );
-		}
-
-		// Consider each dependent and check if it is delayed.
-		foreach ( $dependents as $dependent ) {
-			// Do not defer if there are any `after` inline scripts associated with the dependent.
-			if ( $this->has_inline_script( $handle, 'after' ) ) {
-				return false;
-			}
-
-			if ( ! isset( $this->registered[ $dependent ] ) ) {
-				continue;
-			}
-
-			// If the dependency is not enqueued, exclude it from consideration.
-			if ( ! $this->query( $dependent, 'enqueued' ) ) {
-				continue;
-			}
-
-			// Handle script alias case (where it has no src). Here, the strategy doesn't matter, but only whether there are inline scripts.
-			if ( ! $this->registered[ $dependent ]->src ) {
-				// A script alias cannot be delayed if it has inline scripts since there is no load event.
-				if ( $this->has_inline_script( $dependent ) ) {
-					return false;
-				}
-			} else {
-				// If the dependent script is not using the defer or async strategy, no script in the chain is delayed.
-				$strategy = $this->get_data( $dependent, 'strategy' );
-				if ( $async_only ?
-					'async' !== $strategy :
-					! $this->is_delayed_strategy( $strategy )
-				) {
-					return false;
-				}
-			}
-
-			// Recursively check all dependents.
-			if ( ! $this->has_only_delayed_dependents( $dependent, $async_only, $checked ) ) {
-				return false;
-			}
-		}
-
-		return true;
-	}
-
-	/**
 	 * Gets the best eligible loading strategy for a script.
 	 *
 	 * @since 6.3.0
 	 *
 	 * @param string  $handle The script handle.
-	 * @return string $strategy The best eligible loading strategy.
+	 * @return string The best eligible loading strategy.
 	 */
 	private function get_eligible_loading_strategy( $handle ) {
-		if ( ! isset( $this->registered[ $handle ] ) ) {
+		$eligible = $this->filter_eligible_strategies( $handle );
+
+		// Bail early once we know the eligible strategy is blocking.
+		if ( empty( $eligible ) ) {
 			return '';
 		}
 
+		return in_array( 'async', $eligible, true ) ? 'async' : 'defer' ;
+	}
+
+	/**
+	 * Filter the list of eligible loading strategies for a script.
+	 *
+	 * @since 6.3.0
+	 *
+	 * @param string              $handle   The script handle.
+	 * @param string[]|null       $eligible Optional. The list of strategies to filter. Default null.
+	 * @param array<string, true> $checked  Optional. An array of already checked script handles, used to avoid recursive loops.
+	 * @return string[] A list of eligible loading strategies that could be used.
+	 */
+	private function filter_eligible_strategies( $handle, $eligible = null, $checked = array() ) {
+		// If no strategies are being passed, all strategies are eligible.
+		if ( null === $eligible ) {
+			$eligible = $this->delayed_strategies;
+		}
+
+		// If this handle was already checked, return early.
+		if ( isset( $checked[ $handle ] ) ) {
+			return $eligible;
+		}
+
+		// Mark this handle as checked.
+		$checked[ $handle ] = true;
+
+		// If this handle isn't registered, don't filter anything and return.
+		if ( ! isset( $this->registered[ $handle ] ) ) {
+			return $eligible;
+		}
+
+		// If the handle is not enqueued, don't filter anything and return.
+		if ( ! $this->query( $handle, 'enqueued' ) ) {
+			return $eligible;
+		}
+
+		$is_alias = (bool) ! $this->registered[ $handle ]->src;
 		$intended_strategy = $this->get_data( $handle, 'strategy' );
 
-		/*
-		 * Handle known blocking strategy scenarios.
-		 * - An empty strategy is synonymous with blocking.
-		 * - A script alias (where $src is false) must always be blocking since the after inline script cannot be
-		 *   delayed as there is no external script tag and thus no load event at which the inline script can be run.
-		 */
-		if ( empty( $intended_strategy ) ) {
-			return '';
-		}
-
-		// Aliases that have before/after inline scripts can never be delayed since there is no load event.
-		if ( ! $this->registered[ $handle ]->src && $this->has_inline_script( $handle ) ) {
-			return '';
+		// For non-alias handles, an empty intended strategy filters all strategies.
+		if ( ! $is_alias && empty( $intended_strategy ) ) {
+			return array();
 		}
 
 		// Handles with inline scripts attached in the 'after' position cannot be delayed.
 		if ( $this->has_inline_script( $handle, 'after' ) ) {
-			return '';
+			return array();
 		}
 
-		// Handle async strategy scenario.
-		if ( 'async' === $intended_strategy && $this->has_only_delayed_dependents( $handle, true ) ) {
-			return 'async';
+		// If the intended strategy is 'defer', filter out 'async'.
+		if ( $intended_strategy === 'defer' ) {
+			$eligible =  array( 'defer' );
 		}
 
-		// Handling defer strategy scenarios. (The intended strategy could actually be 'async' here.)
-		if ( $this->has_only_delayed_dependents( $handle ) ) {
-			return 'defer';
+		$dependents = $this->get_dependents( $handle );
+
+		// Recursively filter eligible strategies for dependents.
+		foreach ( $dependents as $dependent ) {
+			// Bail early once we know the eligible strategy is blocking.
+			if ( empty( $eligible ) ) {
+				return array();
+			}
+
+			$eligible = $this->filter_eligible_strategies( $dependent, $eligible, $checked );
 		}
 
-		return '';
+		return $eligible;
 	}
 
 	/**
