@@ -996,10 +996,10 @@ JS;
 	 */
 	private function has_inline_script( $handle, $position = null ) {
 		if ( $position && in_array( $position, array( 'before', 'after' ), true ) ) {
-			return $this->get_data( $handle, $position );
+			return (bool) $this->get_data( $handle, $position );
 		}
 
-		return $this->get_data( $handle, 'before' ) || $this->get_data( $handle, 'after' );
+		return (bool) ( $this->get_data( $handle, 'before' ) || $this->get_data( $handle, 'after' ) );
 	}
 
 	/**
