@@ -353,6 +353,14 @@ JS;
 				},
 				'expected'   => array( 'defer' ),
 			),
+			'async_only_with_async_dependency'     => array(
+				'set_up'     => static function () {
+					wp_enqueue_script( 'foo', 'https://example.com/foo.js', array(), null, array( 'strategy' => 'async' ) );
+					wp_enqueue_script( 'bar', 'https://example.com/bar.js', array( 'foo' ), null, array( 'strategy' => 'async' ) );
+					return 'foo';
+				},
+				'expected'   => array( 'defer', 'async' ),
+			),
 			'async_only_with_defer_dependency'     => array(
 				'set_up'     => static function () {
 					wp_enqueue_script( 'foo', 'https://example.com/foo.js', array(), null, array( 'strategy' => 'async' ) );
@@ -361,13 +369,45 @@ JS;
 				},
 				'expected'   => array( 'defer' ),
 			),
-			'not_async_only_with_defer_dependency' => array(
+			'async_only_with_blocking_dependency' => array(
 				'set_up'     => static function () {
 					wp_enqueue_script( 'foo', 'https://example.com/foo.js', array(), null, array( 'strategy' => 'async' ) );
-					wp_enqueue_script( 'bar', 'https://example.com/bar.js', array( 'foo' ), null, array( 'strategy' => 'defer' ) );
+					wp_enqueue_script( 'bar', 'https://example.com/bar.js', array( 'foo' ), null );
+					return 'foo';
+				},
+				'expected'   => array(),
+			),
+			'defer_with_inline_after_script' => array(
+				'set_up'     => static function () {
+					wp_enqueue_script( 'foo', 'https://example.com/foo.js', array(), null, array( 'strategy' => 'defer' ) );
+					wp_add_inline_script( 'foo', 'console.log("foo")', 'after' );
+					return 'foo';
+				},
+				'expected'   => array(),
+			),
+			'defer_with_inline_before_script' => array(
+				'set_up'     => static function () {
+					wp_enqueue_script( 'foo', 'https://example.com/foo.js', array(), null, array( 'strategy' => 'defer' ) );
+					wp_add_inline_script( 'foo', 'console.log("foo")', 'before' );
 					return 'foo';
 				},
 				'expected'   => array( 'defer' ),
+			),
+			'async_with_inline_after_script' => array(
+				'set_up'     => static function () {
+					wp_enqueue_script( 'foo', 'https://example.com/foo.js', array(), null, array( 'strategy' => 'async' ) );
+					wp_add_inline_script( 'foo', 'console.log("foo")', 'after' );
+					return 'foo';
+				},
+				'expected'   => array(),
+			),
+			'async_with_inline_before_script' => array(
+				'set_up'     => static function () {
+					wp_enqueue_script( 'foo', 'https://example.com/foo.js', array(), null, array( 'strategy' => 'async' ) );
+					wp_add_inline_script( 'foo', 'console.log("foo")', 'before' );
+					return 'foo';
+				},
+				'expected'   => array( 'defer', 'async' ),
 			),
 		);
 	}
