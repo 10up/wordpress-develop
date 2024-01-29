@@ -200,7 +200,14 @@ final class WP_Block_Patterns_Registry {
 			$this->registered_patterns[ $pattern_name ]['content'] = $pattern['content'];
 		}
 
-		$pattern['content'] = $this->prepare_content( $pattern, get_hooked_blocks() );
+		$hooked_blocks    = get_hooked_blocks();
+		$key              = 'block_pattern_' . md5( serialize( $pattern ) . serialize( $hooked_blocks ) );
+		$prepared_content = wp_cache_get( $key, '', false, $found );
+		if ( ! $found ) {
+			$prepared_content = $this->prepare_content( $pattern, get_hooked_blocks() );
+			wp_cache_set( $key, $prepared_content );
+		}
+		$pattern['content'] = $prepared_content;
 
 		return $pattern;
 	}
