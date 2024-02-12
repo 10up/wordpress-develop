@@ -206,14 +206,20 @@ final class WP_Block_Patterns_Registry {
 			return null;
 		}
 
+		$key            = 'registered_block_pattern_' . $pattern_name;
+		$cached_pattern = wp_cache_get( $key, '', false, $found );
+		if ( $found ) {
+			return $cached_pattern;
+		}
+
 		$pattern = $this->registered_patterns[ $pattern_name ];
 		if ( ! isset( $pattern['content'] ) && isset( $pattern['file_path'] ) ) {
 			$pattern['content']                                    = $this->load_content_from_file_path( $pattern['file_path'] );
 			$this->registered_patterns[ $pattern_name ]['content'] = $pattern['content'];
 		}
-
 		$pattern['content'] = $this->prepare_content( $pattern, get_hooked_blocks() );
 
+		wp_cache_set( $key, $pattern );
 		return $pattern;
 	}
 
@@ -243,6 +249,14 @@ final class WP_Block_Patterns_Registry {
 				}
 				continue;
 			}
+
+			$key            = 'registered_block_pattern_' . $index;
+			$cached_pattern = wp_cache_get( $key, '', false, $found );
+			if ( $found ) {
+				$patterns[ $index ] = $cached_pattern;
+				continue;
+			}
+
 			if ( ! isset( $pattern['content'] ) && isset( $pattern['file_path'] ) ) {
 				$pattern['content'] = $this->load_content_from_file_path( $pattern['file_path'] );
 				if ( $outside_init_only ) {
@@ -252,6 +266,8 @@ final class WP_Block_Patterns_Registry {
 				}
 			}
 			$patterns[ $index ]['content'] = $this->prepare_content( $pattern, $hooked_blocks );
+
+			wp_cache_set( $key, $patterns[ $index ] );
 		}
 		return $patterns;
 	}
